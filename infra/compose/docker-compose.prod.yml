@@ -1,29 +1,11 @@
 version: '3.9'
 
-services:
-  postgres:
-    image: pgvector/pgvector:pg16
-    container_name: synthex-postgres
-    restart: always
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-synthex}
-      POSTGRES_USER: ${POSTGRES_USER:-synthex_app}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init-scripts:/docker-entrypoint-initdb.d
-    networks:
-      - synthex-internal
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-synthex_app} -d ${POSTGRES_DB:-synthex}']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    deploy:
-      resources:
-        limits:
-          memory: 4G
+# SYNTHEX PRODUCTION — VPS Deployment
+# Projeto isolado: docker compose -p synthex -f docker-compose.prod.yml up -d
+# Reusa PostgreSQL 15 existente no VPS (não cria container novo)
+# Portas: API 4000, Web 4001 (não conflitam com serviços existentes)
 
+services:
   redis:
     image: redis:7-alpine
     container_name: synthex-redis
@@ -48,11 +30,13 @@ services:
     image: ${ECR_REGISTRY}/synthex-api:${IMAGE_TAG:-latest}
     container_name: synthex-api
     restart: always
+    ports:
+      - '4000:4000'
     environment:
       NODE_ENV: production
-      PORT: 3001
+      PORT: 4000
       DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: ${REDIS_URL}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
@@ -63,12 +47,10 @@ services:
       - synthex-internal
       - synthex-external
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
-      test: ['CMD-SHELL', 'curl -f http://localhost:3001/health || exit 1']
+      test: ['CMD-SHELL', 'curl -f http://localhost:4000/health || exit 1']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -113,6 +95,8 @@ services:
     image: ${ECR_REGISTRY}/synthex-web:${IMAGE_TAG:-latest}
     container_name: synthex-web
     restart: always
+    ports:
+      - '4001:3000'
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     networks:
@@ -130,28 +114,6 @@ services:
         limits:
           memory: 1G
 
-  nginx:
-    image: nginx:1.27-alpine
-    container_name: synthex-nginx
-    restart: always
-    ports:
-      - '80:80'
-      - '443:443'
-    volumes:
-      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ../nginx/ssl:/etc/nginx/ssl:ro
-      - certbot_www:/var/www/certbot:ro
-    networks:
-      - synthex-external
-    depends_on:
-      - web
-      - api
-    logging:
-      driver: 'json-file'
-      options:
-        max-size: '50m'
-        max-file: '3'
-
 networks:
   synthex-internal:
     driver: bridge
@@ -160,6 +122,4 @@ networks:
     driver: bridge
 
 volumes:
-  postgres_data:
   redis_data:
-  certbot_www:
