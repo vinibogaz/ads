@@ -101,17 +101,28 @@ git push -u origin main
 - ✅ Configurou remote GitHub
 - ❌ Push bloqueado por falta de credenciais
 
+### ✅ Desbloqueio Parcial (2026-04-16 19:00)
+
+- ✅ Fundador forneceu GitHub PAT: `ghp_3iZTs85r...`
+- ✅ Remote configurado com token
+- ❌ **Novo bloqueador**: Token sem scope `workflow`
+
+**Erro:**
+```
+! [remote rejected] main -> main (refusing to allow a Personal Access Token 
+to create or update workflow `.github/workflows/ci.yml` without `workflow` scope)
+```
+
 ### 🔑 Aguardando do Fundador
 
-**Uma das 3 opções:**
+**Escolher uma opção:**
 
-1. **GitHub Personal Access Token (PAT)** — formato `ghp_xxxxx` com scope `repo`
-2. **SSH Key** — chave pública para adicionar no GitHub
-3. **Deploy manual** — Fundador faz push manualmente do workspace
+1. **Regenerar token** com scopes: `repo` + `workflow` (recomendado)
+2. **Push sem CI/CD** temporariamente (workaround rápido)
 
-### 📋 TODO — Após Desbloqueio
+### 📋 TODO — Após Resolução
 
-- [ ] Receber credenciais do Fundador
+- [ ] Receber novo token OU confirmar opção 2
 - [ ] Fazer push para https://github.com/vinibogaz/segeo-plataform.git
 - [ ] Notificar Fundador que código está no GitHub
 - [ ] Fundador faz deploy no VPS (git clone + docker compose up -d)
@@ -119,4 +130,4 @@ git push -u origin main
 
 ---
 
-**Última atualização:** 2026-04-16 18:56 (Issue SYN-8 — bloqueada, aguardando credenciais GitHub do Fundador)
+**Última atualização:** 2026-04-16 19:00 (Issue SYN-8 — in_progress, aguardando decisão sobre token scope)
