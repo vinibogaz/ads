@@ -1,0 +1,224 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-typecheck:
+    name: Lint & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+  test-api:
+    name: Test API
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: synthex_test
+          POSTGRES_USER: synthex_app
+          POSTGRES_PASSWORD: test_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run DB migrations
+        env:
+          DATABASE_URL: postgresql://synthex_app:test_password@localhost:5432/synthex_test
+        run: npm run db:migrate --workspace=@synthex/db
+
+      - name: Run API tests
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://synthex_app:test_password@localhost:5432/synthex_test
+          REDIS_URL: redis://localhost:6379
+          JWT_ACCESS_SECRET: test_access_secret_min_32_chars_here_!!!
+          JWT_REFRESH_SECRET: test_refresh_secret_min_32_chars_here!!!
+          ENCRYPTION_KEY: test_encryption_key_exactly_64_hex_chars_000000000000000000000000
+          AI_WORKER_URL: http://localhost:8000
+          AI_WORKER_SECRET: test_worker_secret_16c
+        run: npm run test --workspace=@synthex/api
+
+  test-ai-worker:
+    name: Test AI Worker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        working-directory: apps/ai-worker
+        run: pip install hatch && hatch env create
+
+      - name: Run tests
+        working-directory: apps/ai-worker
+        run: hatch run pytest
+
+  build:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: [lint-typecheck, test-api]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: sa-east-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/Dockerfile.api
+          target: production
+          push: true
+          tags: ${{ steps.login-ecr.outputs.registry }}/synthex-api:${{ github.sha }},${{ steps.login-ecr.outputs.registry }}/synthex-api:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push Web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/Dockerfile.web
+          target: production
+          push: true
+          tags: ${{ steps.login-ecr.outputs.registry }}/synthex-web:${{ github.sha }},${{ steps.login-ecr.outputs.registry }}/synthex-web:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push AI Worker image
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/ai-worker
+          file: infra/docker/Dockerfile.ai-worker
+          target: production
+          push: true
+          tags: ${{ steps.login-ecr.outputs.registry }}/synthex-ai-worker:${{ github.sha }},${{ steps.login-ecr.outputs.registry }}/synthex-ai-worker:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Output image tags
+        run: echo "IMAGE_TAG=${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+
+  deploy:
+    name: Deploy to Production VPS
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: sa-east-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/synthex
+
+            # Pull latest images
+            export ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
+            export IMAGE_TAG=${{ github.sha }}
+
+            aws ecr get-login-password --region sa-east-1 | \
+              docker login --username AWS --password-stdin $ECR_REGISTRY
+
+            docker compose -f infra/compose/docker-compose.prod.yml pull
+
+            # Run migrations before deploying
+            docker compose -f infra/compose/docker-compose.prod.yml run --rm api \
+              node -e "require('./dist/scripts/migrate.js')"
+
+            # Deploy with zero-downtime
+            docker compose -f infra/compose/docker-compose.prod.yml up -d --force-recreate \
+              --no-deps api ai-worker web
+
+            # Health check
+            sleep 15
+            curl -f http://localhost:3001/health || (docker compose logs api && exit 1)
+
+            # Clean up old images
+            docker image prune -f
+
+            echo "Deploy completed: $IMAGE_TAG"

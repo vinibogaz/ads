@@ -1,0 +1,48 @@
+# ---- Base ----
+FROM node:20-alpine AS base
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+COPY package.json turbo.json ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/db/package.json ./packages/db/
+COPY packages/shared/package.json ./packages/shared/
+
+# ---- Dependencies ----
+FROM base AS deps
+RUN npm ci --workspace=@synthex/api --workspace=@synthex/db --workspace=@synthex/shared
+
+# ---- Development ----
+FROM deps AS dev
+COPY . .
+EXPOSE 3001
+CMD ["npm", "run", "dev", "--workspace=@synthex/api"]
+
+# ---- Builder ----
+FROM deps AS builder
+COPY . .
+RUN npm run build --workspace=@synthex/shared
+RUN npm run build --workspace=@synthex/db
+RUN npm run build --workspace=@synthex/api
+
+# ---- Production ----
+FROM node:20-alpine AS production
+RUN apk add --no-cache curl
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY --from=builder /app/apps/api/dist ./dist
+COPY --from=builder /app/apps/api/package.json .
+COPY --from=builder /app/packages/db/dist ./node_modules/@synthex/db/dist
+COPY --from=builder /app/packages/shared/dist ./node_modules/@synthex/shared/dist
+COPY --from=builder /app/node_modules ./node_modules
+
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 fastify
+USER fastify
+
+EXPOSE 3001
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD curl -f http://localhost:3001/health || exit 1
+
+CMD ["node", "dist/server.js"]

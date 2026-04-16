@@ -1,0 +1,108 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: synthex-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: synthex
+      POSTGRES_USER: synthex_app
+      POSTGRES_PASSWORD: dev_password_change_in_prod
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U synthex_app -d synthex']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: synthex-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.api
+      target: dev
+    container_name: synthex-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DATABASE_URL: postgresql://synthex_app:dev_password_change_in_prod@postgres:5432/synthex
+      REDIS_URL: redis://redis:6379
+      JWT_ACCESS_SECRET: dev_access_secret_min_32_chars_long_here
+      JWT_REFRESH_SECRET: dev_refresh_secret_min_32_chars_long_here
+      ENCRYPTION_KEY: dev_encryption_key_must_be_exactly_64_hex_chars_000000000000000
+      AI_WORKER_URL: http://ai-worker:8000
+      AI_WORKER_SECRET: dev_worker_secret_16ch
+      CORS_ORIGIN: http://localhost:3000
+    ports:
+      - '3001:3001'
+    volumes:
+      - ../../apps/api/src:/app/apps/api/src
+      - ../../packages:/app/packages
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  ai-worker:
+    build:
+      context: ../../apps/ai-worker
+      dockerfile: ../../infra/docker/Dockerfile.ai-worker
+      target: dev
+    container_name: synthex-ai-worker
+    restart: unless-stopped
+    environment:
+      PORT: 8000
+      DEBUG: 'true'
+      WORKER_SECRET: dev_worker_secret_16ch
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgresql://synthex_app:dev_password_change_in_prod@postgres:5432/synthex
+    ports:
+      - '8000:8000'
+    volumes:
+      - ../../apps/ai-worker/src:/app/src
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.web
+      target: dev
+    container_name: synthex-web
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+    ports:
+      - '3000:3000'
+    volumes:
+      - ../../apps/web/src:/app/apps/web/src
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -1,0 +1,55 @@
+# ---- Base ----
+FROM python:3.12-slim AS base
+RUN apt-get update && apt-get install -y --no-install-recommends curl && \
+    rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+
+# Install hatch
+RUN pip install --no-cache-dir hatch
+
+COPY pyproject.toml .
+
+# ---- Development ----
+FROM base AS dev
+RUN hatch env create
+COPY . .
+EXPOSE 8000
+CMD ["hatch", "run", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+# ---- Production deps ----
+FROM base AS production-deps
+RUN pip install --no-cache-dir \
+    fastapi>=0.115.6 \
+    uvicorn[standard]>=0.34.0 \
+    openai>=1.59.8 \
+    anthropic>=0.43.0 \
+    redis>=5.2.1 \
+    pydantic>=2.10.5 \
+    pydantic-settings>=2.7.0 \
+    httpx>=0.28.1 \
+    psycopg[binary]>=3.2.4 \
+    tiktoken>=0.8.0 \
+    structlog>=24.4.0
+
+# ---- Production ----
+FROM python:3.12-slim AS production
+RUN apt-get update && apt-get install -y --no-install-recommends curl && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+RUN groupadd --system --gid 1001 aiworker && \
+    useradd --system --uid 1001 --gid aiworker aiworker
+
+COPY --from=production-deps /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=production-deps /usr/local/bin /usr/local/bin
+
+COPY --chown=aiworker:aiworker src ./src
+
+USER aiworker
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+  CMD curl -f http://localhost:8000/health || exit 1
+
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]

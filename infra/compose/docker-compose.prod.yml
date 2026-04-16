@@ -1,0 +1,165 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: synthex-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-synthex}
+      POSTGRES_USER: ${POSTGRES_USER:-synthex_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - synthex-internal
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-synthex_app} -d ${POSTGRES_DB:-synthex}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+
+  redis:
+    image: redis:7-alpine
+    container_name: synthex-redis
+    restart: always
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    networks:
+      - synthex-internal
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD}', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    image: ${ECR_REGISTRY}/synthex-api:${IMAGE_TAG:-latest}
+    container_name: synthex-api
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      AI_WORKER_URL: http://ai-worker:8000
+      AI_WORKER_SECRET: ${AI_WORKER_SECRET}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+    networks:
+      - synthex-internal
+      - synthex-external
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:3001/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '100m'
+        max-file: '3'
+
+  ai-worker:
+    image: ${ECR_REGISTRY}/synthex-ai-worker:${IMAGE_TAG:-latest}
+    container_name: synthex-ai-worker
+    restart: always
+    environment:
+      PORT: 8000
+      WORKER_SECRET: ${AI_WORKER_SECRET}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      REDIS_URL: ${REDIS_URL}
+      DATABASE_URL: ${DATABASE_URL}
+    networks:
+      - synthex-internal
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:8000/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+  web:
+    image: ${ECR_REGISTRY}/synthex-web:${IMAGE_TAG:-latest}
+    container_name: synthex-web
+    restart: always
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    networks:
+      - synthex-internal
+      - synthex-external
+    depends_on:
+      - api
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:3000/ || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: synthex-nginx
+    restart: always
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../nginx/ssl:/etc/nginx/ssl:ro
+      - certbot_www:/var/www/certbot:ro
+    networks:
+      - synthex-external
+    depends_on:
+      - web
+      - api
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '3'
+
+networks:
+  synthex-internal:
+    driver: bridge
+    internal: true
+  synthex-external:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  certbot_www:
