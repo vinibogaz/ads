@@ -81,4 +81,42 @@ Deployment agora está 100% compatível com o VPS do Fundador:
 
 ---
 
-**Última atualização:** 2026-04-16 18:39 (Issue SYN-7 — deployment ajustado, aguardando commit)
+## Issue SYN-8 (BLOCKED) — Push para GitHub
+
+### 🚧 Bloqueador Atual
+
+**Tentativa de push falhou** — Sem credenciais de acesso ao GitHub.
+
+```bash
+git remote add origin https://github.com/vinibogaz/segeo-plataform.git
+git push -u origin main
+# Erro: fatal: could not read Username for 'https://github.com': No such device or address
+```
+
+### ✅ O Que Foi Feito (SYN-8)
+
+- ✅ Navegou para workspace Synthex
+- ✅ Verificou docs/progress.md
+- ✅ Analisou comentários da SYN-7 (instruções de deployment do Fundador)
+- ✅ Configurou remote GitHub
+- ❌ Push bloqueado por falta de credenciais
+
+### 🔑 Aguardando do Fundador
+
+**Uma das 3 opções:**
+
+1. **GitHub Personal Access Token (PAT)** — formato `ghp_xxxxx` com scope `repo`
+2. **SSH Key** — chave pública para adicionar no GitHub
+3. **Deploy manual** — Fundador faz push manualmente do workspace
+
+### 📋 TODO — Após Desbloqueio
+
+- [ ] Receber credenciais do Fundador
+- [ ] Fazer push para https://github.com/vinibogaz/segeo-plataform.git
+- [ ] Notificar Fundador que código está no GitHub
+- [ ] Fundador faz deploy no VPS (git clone + docker compose up -d)
+- [ ] Validar deploy (API http://31.97.245.90:4000, Web http://31.97.245.90:4001)
+
+---
+
+**Última atualização:** 2026-04-16 18:56 (Issue SYN-8 — bloqueada, aguardando credenciais GitHub do Fundador)
