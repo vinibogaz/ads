@@ -15,21 +15,21 @@ Plataforma SaaS modular de inteligência de marketing: SEO, GEO, Ads, CRO, Growt
 **1. Criar database no PostgreSQL existente**
 
 ```bash
-docker exec -i $(docker ps -q -f name=postgres) psql -U postgres << 'EOF'
+docker exec -i $(docker ps -q -f name=postgres) psql -U evolution << 'EOF'
 CREATE DATABASE synthex;
-CREATE USER synthex_app WITH PASSWORD 'SUA_SENHA_AQUI';
-GRANT ALL PRIVILEGES ON DATABASE synthex TO synthex_app;
 \c synthex
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 EOF
 ```
 
+**Nota:** Usando user `evolution` existente no VPS (senha: `evolution123`).
+
 **2. Clonar repositório no VPS**
 
 ```bash
 cd /opt
-git clone https://github.com/SEU_USUARIO/synthex.git
+git clone https://github.com/vinibogaz/segeo-plataform.git synthex
 cd synthex
 ```
 
@@ -40,12 +40,14 @@ cp .env.example .env
 nano .env  # Editar os valores (JWT secrets, API keys, DATABASE_URL)
 ```
 
-**4. Subir aplicação**
+**4. Subir aplicação (build + deploy)**
 
 ```bash
 cd infra/compose
-docker compose -p synthex -f docker-compose.prod.yml up -d
+docker compose -p synthex -f docker-compose.prod.yml up -d --build
 ```
+
+**Nota:** O `--build` constrói as imagens Docker localmente (API, Web, AI Worker).
 
 **5. Configurar Nginx reverse proxy (opcional, se quiser domínio)**
 
