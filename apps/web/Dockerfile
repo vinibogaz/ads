@@ -8,7 +8,7 @@ WORKDIR /app
 RUN apk add --no-cache libc6-compat
 
 # Copy workspace config
-COPY package.json turbo.json ./
+COPY package.json package-lock.json turbo.json ./
 COPY apps/web/package.json apps/web/
 COPY packages packages/
 
@@ -31,7 +31,7 @@ COPY package.json turbo.json tsconfig.json ./
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Build using Turborepo
-RUN npm run build -- --filter=web
+RUN npm run build -- --filter=@synthex/web
 
 # ==================== STAGE 3: Production Runtime ====================
 FROM node:20-alpine AS runner

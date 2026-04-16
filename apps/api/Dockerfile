@@ -9,7 +9,7 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++
 
 # Copy workspace config
-COPY package.json turbo.json ./
+COPY package.json package-lock.json turbo.json ./
 COPY apps/api/package.json apps/api/
 COPY packages packages/
 
@@ -29,7 +29,7 @@ COPY apps/api apps/api
 COPY package.json turbo.json tsconfig.json ./
 
 # Build using Turborepo
-RUN npm run build -- --filter=api
+RUN npm run build -- --filter=@synthex/api
 
 # ==================== STAGE 3: Production Runtime ====================
 FROM node:20-alpine AS runner
