@@ -51,12 +51,22 @@ export async function healthRoutes(app: FastifyInstance) {
 
       const allOk = Object.values(services).every((s) => s === 'ok')
 
-      return reply.status(allOk ? 200 : 503).send({
-        status: allOk ? 'ok' : 'degraded',
-        version: process.env['npm_package_version'] ?? '0.1.0',
-        timestamp: new Date().toISOString(),
-        services,
-      })
+      if (allOk) {
+        return reply.status(200).send({
+          status: 'ok',
+          version: process.env['npm_package_version'] ?? '0.1.0',
+          timestamp: new Date().toISOString(),
+          services,
+        })
+      } else {
+        // @ts-expect-error - Fastify types don't infer 503 status code correctly
+        return reply.status(503).send({
+          status: 'degraded',
+          version: process.env['npm_package_version'] ?? '0.1.0',
+          timestamp: new Date().toISOString(),
+          services,
+        })
+      }
     }
   )
 }

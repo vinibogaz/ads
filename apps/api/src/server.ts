@@ -1,4 +1,5 @@
 import Fastify from 'fastify'
+import fastifySensible from '@fastify/sensible'
 import { authPlugin } from './plugins/auth.js'
 import { corsPlugin } from './plugins/cors.js'
 import { helmetPlugin } from './plugins/helmet.js'
@@ -34,6 +35,7 @@ const app = Fastify({
 // Plugins (order matters)
 await app.register(helmetPlugin)
 await app.register(corsPlugin)
+await app.register(fastifySensible)
 await app.register(rateLimitPlugin)
 await app.register(redisPlugin)
 await app.register(swaggerPlugin)
@@ -50,21 +52,22 @@ await app.register(privacyRoutes, { prefix: '/api/v1/privacy' })
 
 // Global error handler
 app.setErrorHandler((error, request, reply) => {
-  app.log.error({ err: error, url: request.url }, 'Unhandled error')
+  const err = error as any
+  app.log.error({ err, url: request.url }, 'Unhandled error')
 
-  if (error.validation) {
+  if (err.validation) {
     return reply.status(400).send({
       error: 'VALIDATION_ERROR',
       message: 'Invalid request data',
       statusCode: 400,
-      details: error.validation,
+      details: err.validation,
     })
   }
 
-  const statusCode = error.statusCode ?? 500
+  const statusCode = err.statusCode ?? 500
   return reply.status(statusCode).send({
-    error: error.code ?? 'INTERNAL_ERROR',
-    message: statusCode === 500 ? 'Internal server error' : error.message,
+    error: err.code ?? 'INTERNAL_ERROR',
+    message: statusCode === 500 ? 'Internal server error' : err.message,
     statusCode,
   })
 })
@@ -73,7 +76,8 @@ const start = async () => {
   try {
     await app.listen({ port: env.PORT, host: '0.0.0.0' })
     app.log.info(`Synthex API running on port ${env.PORT}`)
-  } catch (err) {
+  } catch (error: unknown) {
+    const err = error as Error
     app.log.error(err)
     process.exit(1)
   }

@@ -166,7 +166,7 @@ export async function contentRoutes(app: FastifyInstance) {
 
       const [updated] = await db
         .update(articles)
-        .set({ ...body, updatedAt: new Date() })
+        .set({ ...body, updatedAt: new Date() } as any)
         .where(and(eq(articles.id, id), eq(articles.tenantId, request.user.tid)))
         .returning()
 

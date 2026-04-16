@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { eq, and } from 'drizzle-orm'
 import { db, users, userInvitations } from '@synthex/db'
 import { z } from 'zod'
-import { hasPermission } from '@synthex/shared'
+import { hasPermission, type UserRole } from '@synthex/shared'
 import { createHash, randomBytes } from 'crypto'
 
 const inviteSchema = z.object({
@@ -49,7 +49,7 @@ export async function userRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      if (!hasPermission(request.user.role, 'admin')) {
+      if (!hasPermission(request.user.role as UserRole, 'admin')) {
         return reply.status(403).send({
           error: 'FORBIDDEN',
           message: 'Only admins and owners can invite users',
@@ -105,7 +105,7 @@ export async function userRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      if (!hasPermission(request.user.role, 'admin')) {
+      if (!hasPermission(request.user.role as UserRole, 'admin')) {
         return reply.status(403).send({
           error: 'FORBIDDEN',
           message: 'Insufficient permissions',
@@ -144,7 +144,7 @@ export async function userRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      if (!hasPermission(request.user.role, 'admin')) {
+      if (!hasPermission(request.user.role as UserRole, 'admin')) {
         return reply.status(403).send({
           error: 'FORBIDDEN',
           message: 'Insufficient permissions',

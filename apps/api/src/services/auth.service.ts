@@ -85,7 +85,6 @@ export class AuthService {
   async login(email: string, password: string): Promise<AuthTokens> {
     const user = await db.query.users.findFirst({
       where: eq(users.email, email.toLowerCase()),
-      with: { tenant: true },
     })
 
     if (!user || user.status !== 'active') {
@@ -97,7 +96,11 @@ export class AuthService {
       throw { statusCode: 401, code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' }
     }
 
-    if (user.tenant.status !== 'active') {
+    const tenant = await db.query.tenants.findFirst({
+      where: eq(tenants.id, user.tenantId),
+    })
+
+    if (!tenant || tenant.status !== 'active') {
       throw { statusCode: 403, code: 'TENANT_SUSPENDED', message: 'Account suspended' }
     }
 

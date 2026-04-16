@@ -1,21 +1,19 @@
 import fp from 'fastify-plugin'
+import fastifyJwt from '@fastify/jwt'
 import type { FastifyInstance, FastifyRequest } from 'fastify'
 import type { JwtPayload } from '@synthex/shared'
 import { env } from '../config/env.js'
+import '../types/fastify.js'
 
 declare module 'fastify' {
   interface FastifyInstance {
     authenticate: (request: FastifyRequest) => Promise<void>
     authenticateOptional: (request: FastifyRequest) => Promise<void>
   }
-
-  interface FastifyRequest {
-    user: JwtPayload
-  }
 }
 
 export const authPlugin = fp(async (app: FastifyInstance) => {
-  await app.register(import('@fastify/jwt'), {
+  await app.register(fastifyJwt, {
     secret: {
       private: env.JWT_ACCESS_SECRET,
       public: env.JWT_ACCESS_SECRET,
@@ -28,7 +26,7 @@ export const authPlugin = fp(async (app: FastifyInstance) => {
   app.decorate('authenticate', async (request: FastifyRequest) => {
     try {
       await request.jwtVerify()
-    } catch (err) {
+    } catch (error: unknown) {
       throw app.httpErrors.unauthorized('Invalid or expired token')
     }
   })
