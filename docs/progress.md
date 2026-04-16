@@ -81,53 +81,52 @@ Deployment agora está 100% compatível com o VPS do Fundador:
 
 ---
 
-## Issue SYN-8 (BLOCKED) — Push para GitHub
+## Issue SYN-8 (DONE) ✅ — Código no GitHub
 
-### 🚧 Bloqueador Atual
+### 🎉 Push Realizado com Sucesso (2026-04-16 19:05)
 
-**Tentativa de push falhou** — Sem credenciais de acesso ao GitHub.
+**Repositório:** https://github.com/vinibogaz/segeo-plataform
 
-```bash
-git remote add origin https://github.com/vinibogaz/segeo-plataform.git
-git push -u origin main
-# Erro: fatal: could not read Username for 'https://github.com': No such device or address
-```
+**Timeline de resolução:**
 
-### ✅ O Que Foi Feito (SYN-8)
+1. **Bloqueador 1** — Sem credenciais GitHub
+   - Fundador forneceu: `ghp_3iZTs85r...`
+   - Tentativa de push → falhou
 
-- ✅ Navegou para workspace Synthex
-- ✅ Verificou docs/progress.md
-- ✅ Analisou comentários da SYN-7 (instruções de deployment do Fundador)
-- ✅ Configurou remote GitHub
-- ❌ Push bloqueado por falta de credenciais
+2. **Bloqueador 2** — Token sem scope `workflow`
+   - Fundador optou por Opção 1 (regenerar token)
+   - Novo token fornecido: `ghp_2tq5OhdH...`
+   - Push realizado com sucesso! ✅
 
-### ✅ Desbloqueio Parcial (2026-04-16 19:00)
+**Commits enviados:**
+- `c0e3546` — Sprint 1: monorepo foundation, auth, DB schema, CI/CD
+- `d4d5ae5` — Ajustar deployment para VPS existente (SYN-7)
+- `6659bb9` — Documentação de progresso (SYN-8 bloqueio inicial)
+- `4c0f1c5` — Atualização de progresso (token scope issue)
 
-- ✅ Fundador forneceu GitHub PAT: `ghp_3iZTs85r...`
-- ✅ Remote configurado com token
-- ❌ **Novo bloqueador**: Token sem scope `workflow`
+### 📦 Conteúdo Final no GitHub
 
-**Erro:**
-```
-! [remote rejected] main -> main (refusing to allow a Personal Access Token 
-to create or update workflow `.github/workflows/ci.yml` without `workflow` scope)
-```
+- **62 arquivos** de código (TypeScript + Python)
+- **Monorepo Turborepo** completo
+- **Apps:** API (Fastify), Web (Next.js 14), AI Worker (FastAPI)
+- **Packages:** @synthex/db, @synthex/shared, @synthex/ui
+- **Infra:** Docker Compose, GitHub Actions CI/CD, scripts de setup
 
-### 🔑 Aguardando do Fundador
+### 🚀 Próximos Passos (Fundador)
 
-**Escolher uma opção:**
+Instruções completas de deployment postadas na [SYN-8](/SYN/issues/SYN-8):
 
-1. **Regenerar token** com scopes: `repo` + `workflow` (recomendado)
-2. **Push sem CI/CD** temporariamente (workaround rápido)
+1. SSH no VPS (31.97.245.90)
+2. Clone do repo em `/opt/synthex`
+3. Configurar `.env` (database, secrets, API keys)
+4. Criar database no PostgreSQL 15 existente
+5. `docker compose up -d` + configurar Nginx reverse proxy
 
-### 📋 TODO — Após Resolução
-
-- [ ] Receber novo token OU confirmar opção 2
-- [ ] Fazer push para https://github.com/vinibogaz/segeo-plataform.git
-- [ ] Notificar Fundador que código está no GitHub
-- [ ] Fundador faz deploy no VPS (git clone + docker compose up -d)
-- [ ] Validar deploy (API http://31.97.245.90:4000, Web http://31.97.245.90:4001)
+**Endpoints esperados pós-deploy:**
+- Web: http://31.97.245.90:4001
+- API: http://31.97.245.90:4000
+- API Docs: http://31.97.245.90:4000/docs
 
 ---
 
-**Última atualização:** 2026-04-16 19:00 (Issue SYN-8 — in_progress, aguardando decisão sobre token scope)
+**Última atualização:** 2026-04-16 19:05 (Issue SYN-8 — CONCLUÍDA, código no GitHub, aguardando deploy do Fundador)
