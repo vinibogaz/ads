@@ -21,20 +21,17 @@ WORKDIR /app
 
 # Copy dependencies
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 COPY --from=deps /app/packages ./packages
 
 # Copy source code
 COPY apps/web apps/web
 COPY package.json turbo.json tsconfig.json ./
 
-# Build Next.js
-WORKDIR /app/apps/web
-
 # Next.js collects telemetry data (disable in production)
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN npm run build
+# Build using Turborepo
+RUN npm run build -- --filter=web
 
 # ==================== STAGE 3: Production Runtime ====================
 FROM node:20-alpine AS runner

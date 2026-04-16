@@ -13,16 +13,15 @@ RUN apt-get update && \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy dependency files
-COPY apps/ai-worker/pyproject.toml ./
+# Copy all application files (needed for pip install with hatchling)
+COPY apps/ai-worker ./
 
 # Install dependencies to a virtual environment
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir hatchling && \
-    pip install --no-cache-dir -e .
+    pip install --no-cache-dir .
 
 # ==================== STAGE 2: Production Runtime ====================
 FROM python:3.12-slim AS runner

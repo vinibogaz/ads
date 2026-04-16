@@ -22,16 +22,14 @@ WORKDIR /app
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=deps /app/packages ./packages
 
 # Copy source code
 COPY apps/api apps/api
 COPY package.json turbo.json tsconfig.json ./
 
-# Build TypeScript
-WORKDIR /app/apps/api
-RUN npm run build
+# Build using Turborepo
+RUN npm run build -- --filter=api
 
 # ==================== STAGE 3: Production Runtime ====================
 FROM node:20-alpine AS runner
