@@ -48,6 +48,8 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=builder /app/apps/web/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./.next/static
+# Copy node_modules (standalone não inclui em monorepos)
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 USER nextjs
 
