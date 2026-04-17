@@ -38,18 +38,23 @@ npm ci
 echo "✅ Dependências instaladas"
 
 echo ""
-echo "=== 3. Aplicar schema ao banco (Drizzle push) ==="
+echo "=== 3. Build do pacote db (necessário antes do drizzle push) ==="
+npm run build --workspace=@synthex/db
+echo "✅ Build @synthex/db concluído"
+
+echo ""
+echo "=== 4. Aplicar schema ao banco (Drizzle push) ==="
 npm run db:push --workspace=@synthex/db
 echo "✅ Schema aplicado"
 
 echo ""
-echo "=== 4. Build e subida dos containers ==="
+echo "=== 5. Build e subida dos containers ==="
 docker compose -f "$COMPOSE_FILE" build
 docker compose -f "$COMPOSE_FILE" up -d
 echo "✅ Containers no ar"
 
 echo ""
-echo "=== 5. Aguardar 20s e verificar saúde ==="
+echo "=== 6. Aguardar 20s e verificar saúde ==="
 sleep 20
 docker compose -f "$COMPOSE_FILE" ps
 
