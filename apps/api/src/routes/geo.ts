@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { eq, and, desc } from 'drizzle-orm'
 import { db, geoMonitors, geoScores, geoAlerts } from '@synthex/db'
 import { z } from 'zod'
+import { env } from '../config/env.js'
 
 const createMonitorSchema = z.object({
   brandName: z.string().min(1).max(255),
@@ -125,6 +126,108 @@ export async function geoRoutes(app: FastifyInstance) {
       }))
 
       return reply.status(202).send({ data: { message: 'Collection triggered', monitorId: id } })
+    }
+  )
+
+  // POST /api/v1/geo/monitors/:id/collect
+  // Calls ai-worker synchronously and persists score — used for "Simular coleta" in UI
+  app.post(
+    '/monitors/:id/collect',
+    { schema: { tags: ['geo'], summary: 'Run GEO collection via AI worker (sync)' } },
+    async (request, reply) => {
+      const { id } = request.params as { id: string }
+
+      const monitor = await db.query.geoMonitors.findFirst({
+        where: and(eq(geoMonitors.id, id), eq(geoMonitors.tenantId, request.user.tid)),
+      })
+
+      if (!monitor) {
+        return reply.status(404).send({ error: 'NOT_FOUND', message: 'Monitor not found', statusCode: 404 })
+      }
+
+      // Call ai-worker mock collect endpoint
+      let workerData: {
+        overallScore: number
+        engineScores: Record<string, number>
+        mentions: Array<{
+          engine: string
+          keyword: string
+          mentioned: boolean
+          sentiment: string
+          positionRank: number | null
+        }>
+      }
+
+      try {
+        const workerRes = await fetch(`${env.AI_WORKER_URL}/api/collect/geo`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Worker-Secret': env.AI_WORKER_SECRET,
+          },
+          body: JSON.stringify({
+            monitorId: id,
+            tenantId: request.user.tid,
+            brandName: monitor.brandName,
+            keywords: monitor.keywords,
+            engines: monitor.engines,
+          }),
+        })
+
+        if (!workerRes.ok) {
+          const txt = await workerRes.text()
+          app.log.error({ status: workerRes.status, body: txt }, 'GEO worker error')
+          return reply.status(502).send({ error: 'WORKER_ERROR', message: 'AI Worker unavailable', statusCode: 502 })
+        }
+
+        workerData = await workerRes.json() as typeof workerData
+      } catch (err) {
+        app.log.error({ err }, 'Failed to reach AI Worker')
+        return reply.status(503).send({ error: 'WORKER_UNREACHABLE', message: 'AI Worker is not reachable', statusCode: 503 })
+      }
+
+      // Upsert today's score
+      const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
+      const mentionCount = workerData.mentions.filter(m => m.mentioned).length
+      const totalMentions = workerData.mentions.length
+      const visibilityRate = totalMentions > 0 ? (mentionCount / totalMentions) * 100 : 0
+
+      const positiveCount = workerData.mentions.filter(m => m.mentioned && m.sentiment === 'positive').length
+      const mentionedCount = workerData.mentions.filter(m => m.mentioned).length
+      const avgSentiment = mentionedCount > 0 ? (positiveCount / mentionedCount) * 100 : 50
+
+      const [score] = await db
+        .insert(geoScores)
+        .values({
+          monitorId: id,
+          tenantId: request.user.tid,
+          calculatedDate: today,
+          totalScore: workerData.overallScore.toString(),
+          visibilityRate: visibilityRate.toFixed(2),
+          avgSentiment: avgSentiment.toFixed(2),
+          byEngine: workerData.engineScores,
+        })
+        .onConflictDoUpdate({
+          target: [geoScores.monitorId, geoScores.calculatedDate],
+          set: {
+            totalScore: workerData.overallScore.toString(),
+            visibilityRate: visibilityRate.toFixed(2),
+            avgSentiment: avgSentiment.toFixed(2),
+            byEngine: workerData.engineScores,
+          },
+        })
+        .returning()
+
+      return reply.send({
+        data: {
+          score,
+          engineScores: workerData.engineScores,
+          overallScore: workerData.overallScore,
+          mentionRate: visibilityRate.toFixed(1),
+          totalMentions,
+          mentionCount,
+        },
+      })
     }
   )
 }

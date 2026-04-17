@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
-from .routes import generate, jobs, health
+from .routes import generate, jobs, health, geo
 from .services.queue import queue_service
 import structlog
 
@@ -38,3 +38,4 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(generate.router, prefix="/api")
 app.include_router(jobs.router, prefix="/api")
+app.include_router(geo.router, prefix="/api")
