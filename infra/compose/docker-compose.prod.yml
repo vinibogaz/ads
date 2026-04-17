@@ -49,6 +49,7 @@ services:
     networks:
       - synthex-internal
       - synthex-external
+      - synthex-data
     depends_on:
       redis:
         condition: service_healthy
@@ -84,6 +85,7 @@ services:
       DATABASE_URL: ${DATABASE_URL}
     networks:
       - synthex-internal
+      - synthex-data
     depends_on:
       redis:
         condition: service_healthy
@@ -129,6 +131,10 @@ networks:
     internal: true
   synthex-external:
     driver: bridge
+  synthex-data:
+    # Rede persistente para acesso ao evolution_postgres
+    # Criada em deploy.sh e nunca deletada pelo compose down
+    external: true
 
 volumes:
   redis_data:
