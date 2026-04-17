@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { apiRequest } from '@/lib/api'
 
 interface GeoMonitor {
@@ -84,10 +85,29 @@ export function GeoMonitorsView() {
   })
   const [submitting, setSubmitting] = useState(false)
 
+  const loadScores = async (monitorList: GeoMonitor[]) => {
+    const results = await Promise.allSettled(
+      monitorList.map(m =>
+        apiRequest<MonitorScore[]>(`/geo/scores?monitorId=${m.id}`)
+          .then(res => ({ id: m.id, score: res.data[0] ?? null }))
+      )
+    )
+    const scoreMap: Record<string, MonitorScore> = {}
+    for (const r of results) {
+      if (r.status === 'fulfilled' && r.value.score) {
+        scoreMap[r.value.id] = r.value.score
+      }
+    }
+    setScores(s => ({ ...s, ...scoreMap }))
+  }
+
   const load = async () => {
     try {
       const res = await apiRequest<GeoMonitor[]>('/geo/monitors')
       setMonitors(res.data)
+      if (res.data.length > 0) {
+        loadScores(res.data)
+      }
     } catch {
       setError('Erro ao carregar monitores')
     } finally {
@@ -308,7 +328,9 @@ export function GeoMonitorsView() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="font-semibold text-orf-text">{m.brandName}</span>
+                      <Link href={`/geo/monitors/${m.id}`} className="font-semibold text-orf-text hover:text-orf-primary transition-colors">
+                        {m.brandName}
+                      </Link>
                       <span className={`orf-badge ${m.isActive ? 'orf-badge-success' : 'orf-badge-warning'}`}>
                         {m.isActive ? 'Ativo' : 'Inativo'}
                       </span>

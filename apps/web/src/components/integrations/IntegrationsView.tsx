@@ -13,6 +13,7 @@ interface Integration {
 }
 
 const integrations: Integration[] = [
+  // CMS
   {
     id: 'wordpress',
     name: 'WordPress',
@@ -26,6 +27,33 @@ const integrations: Integration[] = [
       </svg>
     ),
   },
+  {
+    id: 'ghost',
+    name: 'Ghost',
+    description: 'Publique conteúdo diretamente no seu site Ghost via Content API',
+    category: 'CMS',
+    status: 'available',
+    color: '#15171A',
+    icon: (
+      <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current" style={{ color: '#15171A' }}>
+        <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 4.57c2.974 0 5.51 1.638 6.89 4.067H5.11C6.49 6.208 9.026 4.57 12 4.57zm0 14.86A7.432 7.432 0 016.048 16.5h11.904A7.432 7.432 0 0112 19.43zm8.447-5.357H3.553a8.452 8.452 0 010-4.147h16.894a8.452 8.452 0 010 4.147z"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'webflow',
+    name: 'Webflow',
+    description: 'Sincronize conteúdo com coleções CMS do Webflow via API',
+    category: 'CMS',
+    status: 'coming_soon',
+    color: '#4353FF',
+    icon: (
+      <svg viewBox="0 0 24 24" className="w-6 h-6 fill-[#4353FF]">
+        <path d="M17.83 7.17L13.1 19.8l-2.97-7.04-1.22 3.08L6.76 7.17H0l6.17 9.65 2.21-5.58 2.15 5.1L14.19 5.6l.85 2.13H24l-6.17 9.65V7.17z"/>
+      </svg>
+    ),
+  },
+  // SEO
   {
     id: 'gsc',
     name: 'Google Search Console',
@@ -43,6 +71,33 @@ const integrations: Integration[] = [
     ),
   },
   {
+    id: 'semrush',
+    name: 'Semrush',
+    description: 'Importe pesquisa de keywords, análise de concorrentes e backlinks',
+    category: 'SEO',
+    status: 'coming_soon',
+    color: '#FF642D',
+    icon: (
+      <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current text-[#FF642D]">
+        <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 7.428l-1.87 8.312-3.354-4.738-4.054 4.738-1.406-8.312h2.19l.686 4.364 3.116-3.828 2.866 3.828.758-4.364h2.068z"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'ahrefs',
+    name: 'Ahrefs',
+    description: 'Monitore backlinks, autoridade de domínio e oportunidades de keywords',
+    category: 'SEO',
+    status: 'coming_soon',
+    color: '#1E90FF',
+    icon: (
+      <svg viewBox="0 0 24 24" className="w-6 h-6 fill-[#1E90FF]">
+        <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zM9.5 16.5L6 8h2.5l2 5.5 2-5.5H15l-3.5 8.5H9.5z"/>
+      </svg>
+    ),
+  },
+  // Analytics
+  {
     id: 'ga4',
     name: 'Google Analytics 4',
     description: 'Conecte métricas de tráfego e conversão ao seu dashboard',
@@ -55,42 +110,17 @@ const integrations: Integration[] = [
       </svg>
     ),
   },
+  // Automação
   {
-    id: 'semrush',
-    name: 'Semrush',
-    description: 'Importe pesquisa de keywords, análise de concorrentes e backllinks',
-    category: 'SEO',
-    status: 'coming_soon',
-    color: '#FF642D',
+    id: 'n8n',
+    name: 'n8n',
+    description: 'Automatize fluxos com o n8n self-hosted via webhooks e nós nativos',
+    category: 'Automação',
+    status: 'available',
+    color: '#EA4B71',
     icon: (
-      <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current text-[#FF642D]">
-        <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 7.428l-1.87 8.312-3.354-4.738-4.054 4.738-1.406-8.312h2.19l.686 4.364 3.116-3.828 2.866 3.828.758-4.364h2.068z"/>
-      </svg>
-    ),
-  },
-  {
-    id: 'meta',
-    name: 'Meta Ads',
-    description: 'Integre campanhas do Facebook e Instagram Ads com conteúdo gerado',
-    category: 'Ads',
-    status: 'coming_soon',
-    color: '#0866FF',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-6 h-6 fill-[#0866FF]">
-        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-      </svg>
-    ),
-  },
-  {
-    id: 'linkedin',
-    name: 'LinkedIn',
-    description: 'Publique artigos e posts no LinkedIn diretamente da plataforma',
-    category: 'Social',
-    status: 'coming_soon',
-    color: '#0A66C2',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-6 h-6 fill-[#0A66C2]">
-        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+      <svg viewBox="0 0 24 24" className="w-6 h-6 fill-[#EA4B71]">
+        <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm-1 7h2v4h4v2h-4v4h-2v-4H7v-2h4V7z"/>
       </svg>
     ),
   },
@@ -99,7 +129,7 @@ const integrations: Integration[] = [
     name: 'Zapier',
     description: 'Automatize fluxos com mais de 5.000 apps via Zapier webhooks',
     category: 'Automação',
-    status: 'coming_soon',
+    status: 'available',
     color: '#FF4A00',
     icon: (
       <svg viewBox="0 0 24 24" className="w-6 h-6 fill-[#FF4A00]">
@@ -107,6 +137,21 @@ const integrations: Integration[] = [
       </svg>
     ),
   },
+  // Social
+  {
+    id: 'linkedin',
+    name: 'LinkedIn',
+    description: 'Publique artigos e posts no LinkedIn diretamente da plataforma',
+    category: 'Social',
+    status: 'available',
+    color: '#0A66C2',
+    icon: (
+      <svg viewBox="0 0 24 24" className="w-6 h-6 fill-[#0A66C2]">
+        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+      </svg>
+    ),
+  },
+  // E-commerce
   {
     id: 'shopify',
     name: 'Shopify',
@@ -126,19 +171,35 @@ const CATEGORY_COLORS: Record<string, string> = {
   CMS: 'text-orf-primary bg-orf-primary/10',
   SEO: 'text-orf-success bg-orf-success/10',
   Analytics: 'text-orf-warning bg-orf-warning/10',
-  Ads: 'text-orf-secondary bg-orf-secondary/10',
   Social: 'text-blue-400 bg-blue-400/10',
   Automação: 'text-orange-400 bg-orange-400/10',
   'E-commerce': 'text-green-400 bg-green-400/10',
 }
 
+// Integrations that require a webhook URL config before connecting
+const WEBHOOK_INTEGRATIONS = new Set(['zapier', 'n8n'])
+
 export function IntegrationsView() {
   const [connecting, setConnecting] = useState<string | null>(null)
+  const [webhookConfig, setWebhookConfig] = useState<Record<string, string>>({})
+  const [webhookOpen, setWebhookOpen] = useState<string | null>(null)
+  const [savedWebhooks, setSavedWebhooks] = useState<Record<string, string>>({})
 
   const handleConnect = (id: string, status: string) => {
     if (status !== 'available') return
+    if (WEBHOOK_INTEGRATIONS.has(id)) {
+      setWebhookOpen(open => open === id ? null : id)
+      return
+    }
     setConnecting(id)
     setTimeout(() => setConnecting(null), 2000)
+  }
+
+  const handleSaveWebhook = (id: string) => {
+    const url = webhookConfig[id]?.trim()
+    if (!url) return
+    setSavedWebhooks(s => ({ ...s, [id]: url }))
+    setWebhookOpen(null)
   }
 
   const categories = [...new Set(integrations.map(i => i.category))]
@@ -157,7 +218,7 @@ export function IntegrationsView() {
           <span className="text-sm text-orf-text">{integrations.filter(i => i.status === 'connected').length} conectadas</span>
         </div>
         <div className="w-px h-4 bg-orf-border" />
-        <span className="text-sm text-orf-text-2">{integrations.length} disponíveis</span>
+        <span className="text-sm text-orf-text-2">{integrations.filter(i => i.status === 'available').length} disponíveis</span>
         <div className="flex-1" />
         <span className="text-xs text-orf-text-3">Mais integrações em breve →</span>
       </div>
@@ -170,50 +231,82 @@ export function IntegrationsView() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {integrations.filter(i => i.category === cat).map(integration => (
-              <div
-                key={integration.id}
-                className={`orf-card group transition-all duration-200 ${
-                  integration.status === 'available'
-                    ? 'hover:border-orf-primary/40 hover:shadow-orf-glow cursor-pointer'
-                    : 'opacity-60'
-                }`}
-              >
-                <div className="flex items-start gap-4">
-                  <div
-                    className="w-10 h-10 rounded-orf-md flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: `${integration.color}15` }}
-                  >
-                    {integration.icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-medium text-orf-text text-sm">{integration.name}</h3>
-                      {integration.status === 'connected' && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-orf-success" />
-                      )}
-                    </div>
-                    <p className="text-xs text-orf-text-3 leading-relaxed">{integration.description}</p>
-                  </div>
-                </div>
+            {integrations.filter(i => i.category === cat).map(integration => {
+              const isSaved = !!savedWebhooks[integration.id]
+              const isWebhookOpen = webhookOpen === integration.id
 
-                <div className="mt-4 flex items-center justify-between">
-                  {integration.status === 'connected' ? (
-                    <span className="orf-badge orf-badge-success">Conectado</span>
-                  ) : integration.status === 'coming_soon' ? (
-                    <span className="orf-badge bg-orf-surface-2 text-orf-text-3">Em breve</span>
-                  ) : (
-                    <button
-                      onClick={() => handleConnect(integration.id, integration.status)}
-                      disabled={connecting === integration.id}
-                      className="orf-btn-secondary text-xs py-1.5 px-3 group-hover:border-orf-primary/60 group-hover:text-orf-primary transition-colors"
+              return (
+                <div
+                  key={integration.id}
+                  className={`orf-card group transition-all duration-200 ${
+                    integration.status === 'available'
+                      ? 'hover:border-orf-primary/40 hover:shadow-orf-glow'
+                      : 'opacity-60'
+                  }`}
+                >
+                  <div className="flex items-start gap-4">
+                    <div
+                      className="w-10 h-10 rounded-orf-md flex items-center justify-center shrink-0"
+                      style={{ backgroundColor: `${integration.color}15` }}
                     >
-                      {connecting === integration.id ? 'Conectando...' : 'Conectar'}
-                    </button>
+                      {integration.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-medium text-orf-text text-sm">{integration.name}</h3>
+                        {(integration.status === 'connected' || isSaved) && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-orf-success" />
+                        )}
+                      </div>
+                      <p className="text-xs text-orf-text-3 leading-relaxed">{integration.description}</p>
+                    </div>
+                  </div>
+
+                  {/* Webhook config inline form */}
+                  {isWebhookOpen && (
+                    <div className="mt-3 pt-3 border-t border-orf-border space-y-2">
+                      <label className="text-xs text-orf-text-2 font-medium">URL do Webhook</label>
+                      <input
+                        className="orf-input text-xs"
+                        placeholder="https://hooks.zapier.com/..."
+                        value={webhookConfig[integration.id] ?? ''}
+                        onChange={e => setWebhookConfig(c => ({ ...c, [integration.id]: e.target.value }))}
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleSaveWebhook(integration.id)}
+                          className="orf-btn-primary text-xs py-1.5 px-3 flex-1"
+                        >
+                          Salvar
+                        </button>
+                        <button
+                          onClick={() => setWebhookOpen(null)}
+                          className="orf-btn-ghost text-xs py-1.5 px-3"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
                   )}
+
+                  <div className="mt-4 flex items-center justify-between">
+                    {integration.status === 'connected' || isSaved ? (
+                      <span className="orf-badge orf-badge-success">Conectado</span>
+                    ) : integration.status === 'coming_soon' ? (
+                      <span className="orf-badge bg-orf-surface-2 text-orf-text-3">Em breve</span>
+                    ) : (
+                      <button
+                        onClick={() => handleConnect(integration.id, integration.status)}
+                        disabled={connecting === integration.id}
+                        className="orf-btn-secondary text-xs py-1.5 px-3 group-hover:border-orf-primary/60 group-hover:text-orf-primary transition-colors"
+                      >
+                        {connecting === integration.id ? 'Conectando...' : isWebhookOpen ? 'Configurando...' : 'Conectar'}
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       ))}

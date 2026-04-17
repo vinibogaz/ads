@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { apiRequest } from '@/lib/api'
 
 interface Article {
@@ -8,7 +9,7 @@ interface Article {
   title: string | null
   format: string
   status: string
-  primaryKeyword: string
+  keywords: string[]
   wordCount: number | null
   seoScore: number | null
   createdAt: string
@@ -249,35 +250,37 @@ export function ContentEngineView() {
         ) : (
           <div className="space-y-2">
             {articles.map(article => (
-              <div key={article.id} className="orf-card hover:border-orf-border-2 transition-all duration-200 cursor-pointer group">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className={`orf-badge ${STATUS_STYLES[article.status] ?? 'orf-badge-primary'}`}>
-                        {article.status}
-                      </span>
-                      <span className="orf-badge bg-orf-surface-2 text-orf-text-3">
-                        {FORMAT_LABELS[article.format] ?? article.format}
-                      </span>
-                      {article.wordCount && (
-                        <span className="text-xs text-orf-text-3">{article.wordCount.toLocaleString()} palavras</span>
-                      )}
+              <Link key={article.id} href={`/content/articles/${article.id}`} className="block">
+                <div className="orf-card hover:border-orf-border-2 transition-all duration-200 cursor-pointer group">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className={`orf-badge ${STATUS_STYLES[article.status] ?? 'orf-badge-primary'}`}>
+                          {article.status}
+                        </span>
+                        <span className="orf-badge bg-orf-surface-2 text-orf-text-3">
+                          {FORMAT_LABELS[article.format] ?? article.format}
+                        </span>
+                        {article.wordCount && (
+                          <span className="text-xs text-orf-text-3">{article.wordCount.toLocaleString()} palavras</span>
+                        )}
+                      </div>
+                      <h3 className="text-sm font-medium text-orf-text group-hover:text-orf-primary transition-colors truncate">
+                        {article.title ?? `Artigo: ${article.keywords?.[0]}`}
+                      </h3>
+                      <p className="text-xs text-orf-text-3 mt-0.5">
+                        Keyword: <span className="text-orf-text-2">{article.keywords?.[0]}</span>
+                      </p>
                     </div>
-                    <h3 className="text-sm font-medium text-orf-text group-hover:text-orf-primary transition-colors truncate">
-                      {article.title ?? `Artigo: ${article.primaryKeyword}`}
-                    </h3>
-                    <p className="text-xs text-orf-text-3 mt-0.5">
-                      Keyword: <span className="text-orf-text-2">{article.primaryKeyword}</span>
-                    </p>
+                    {article.seoScore !== null && (
+                      <div className={`text-right shrink-0 ${article.seoScore >= 70 ? 'text-orf-success' : article.seoScore >= 40 ? 'text-orf-warning' : 'text-orf-error'}`}>
+                        <p className="text-lg font-bold">{article.seoScore}</p>
+                        <p className="text-xs opacity-70">SEO</p>
+                      </div>
+                    )}
                   </div>
-                  {article.seoScore !== null && (
-                    <div className={`text-right shrink-0 ${article.seoScore >= 70 ? 'text-orf-success' : article.seoScore >= 40 ? 'text-orf-warning' : 'text-orf-error'}`}>
-                      <p className="text-lg font-bold">{article.seoScore}</p>
-                      <p className="text-xs opacity-70">SEO</p>
-                    </div>
-                  )}
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}
