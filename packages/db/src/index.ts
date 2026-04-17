@@ -1,3 +1,3 @@
-export * from './schema/index'
-export * from './client'
-export * from './rls'
+export * from './schema/index.js'
+export * from './client.js'
+export * from './rls.js'

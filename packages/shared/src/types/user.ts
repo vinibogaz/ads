@@ -1,4 +1,4 @@
-import type { UserRole } from './auth'
+import type { UserRole } from './auth.js'
 
 export type UserStatus = 'active' | 'inactive' | 'invited'
 

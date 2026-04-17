@@ -1,6 +1,6 @@
 import { pgTable, uuid, text, timestamp, boolean, varchar } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
-import { users } from './core'
+import { users } from './core.js'
 
 // REFRESH TOKENS — stored for rotation + revocation
 export const refreshTokens = pgTable('refresh_tokens', {

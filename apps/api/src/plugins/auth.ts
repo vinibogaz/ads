@@ -3,7 +3,6 @@ import fastifyJwt from '@fastify/jwt'
 import type { FastifyInstance, FastifyRequest } from 'fastify'
 import type { JwtPayload } from '@synthex/shared'
 import { env } from '../config/env.js'
-import '../types/fastify.js'
 
 declare module 'fastify' {
   interface FastifyInstance {

@@ -11,7 +11,7 @@ import {
   pgEnum,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
-import { users } from './core'
+import { users } from './core.js'
 
 // Enums
 export const articleFormatEnum = pgEnum('article_format', [
