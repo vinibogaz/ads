@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:4000'
-const REFRESH_TTL = 60 * 60 * 24 * 7 // 7 days
+const REFRESH_TTL = 60 * 60 * 24 * 7
 
 export async function POST(request: NextRequest) {
-  const body = await request.json()
+  const refreshToken = request.cookies.get('synthex-refresh')?.value
 
-  const res = await fetch(`${API_URL}/api/v1/auth/login`, {
+  if (!refreshToken) {
+    return NextResponse.json({ error: 'NO_SESSION' }, { status: 401 })
+  }
+
+  const res = await fetch(`${API_URL}/api/v1/auth/refresh`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ refreshToken }),
   })
 
   const data = await res.json()
@@ -23,6 +27,8 @@ export async function POST(request: NextRequest) {
       maxAge: REFRESH_TTL,
       path: '/',
     })
+  } else if (!res.ok) {
+    response.cookies.delete('synthex-refresh')
   }
 
   return response

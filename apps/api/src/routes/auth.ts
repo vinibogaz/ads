@@ -141,4 +141,37 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.send({ data: request.user })
     }
   )
+
+  // POST /api/v1/auth/change-password
+  app.post(
+    '/change-password',
+    {
+      preHandler: [app.authenticate],
+      schema: {
+        tags: ['auth'],
+        summary: 'Change current user password',
+        body: {
+          type: 'object',
+          required: ['currentPassword', 'newPassword'],
+          properties: {
+            currentPassword: { type: 'string' },
+            newPassword: { type: 'string', minLength: 8 },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const body = z
+        .object({
+          currentPassword: z.string(),
+          newPassword: z.string().min(8).max(128),
+        })
+        .parse(request.body)
+
+      await authService.changePassword(request.user.sub, body.currentPassword, body.newPassword)
+      // Revoke all sessions so user must re-login everywhere
+      await authService.revokeAllUserSessions(request.user.sub)
+      return reply.status(204).send()
+    }
+  )
 }

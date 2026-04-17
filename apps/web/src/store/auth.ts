@@ -1,29 +1,45 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+
+interface AuthUser {
+  sub: string
+  tid: string
+  role: string
+  email?: string
+  name?: string
+}
 
 interface AuthState {
   accessToken: string | null
-  refreshToken: string | null
+  user: AuthUser | null
   isAuthenticated: boolean
-  setTokens: (accessToken: string, refreshToken: string) => void
+  setTokens: (accessToken: string) => void
+  setUser: (user: AuthUser) => void
   clearTokens: () => void
+  logout: () => Promise<void>
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      accessToken: null,
-      refreshToken: null,
-      isAuthenticated: false,
-      setTokens: (accessToken, refreshToken) =>
-        set({ accessToken, refreshToken, isAuthenticated: true }),
-      clearTokens: () =>
-        set({ accessToken: null, refreshToken: null, isAuthenticated: false }),
-    }),
-    {
-      name: 'synthex-auth',
-      // Only persist refresh token (access token is short-lived)
-      partialize: (state) => ({ refreshToken: state.refreshToken }),
+export const useAuthStore = create<AuthState>((set) => ({
+  accessToken: null,
+  user: null,
+  isAuthenticated: false,
+
+  setTokens: (accessToken) => {
+    // Decode JWT payload (no signature verification — just display)
+    try {
+      const payload = JSON.parse(atob(accessToken.split('.')[1]!)) as AuthUser
+      set({ accessToken, isAuthenticated: true, user: payload })
+    } catch {
+      set({ accessToken, isAuthenticated: true })
     }
-  )
-)
+  },
+
+  setUser: (user) => set({ user }),
+
+  clearTokens: () => set({ accessToken: null, user: null, isAuthenticated: false }),
+
+  logout: async () => {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    set({ accessToken: null, user: null, isAuthenticated: false })
+    window.location.href = '/login'
+  },
+}))

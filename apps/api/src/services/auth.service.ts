@@ -159,6 +159,23 @@ export class AuthService {
     await db.update(refreshTokens).set({ isRevoked: true }).where(eq(refreshTokens.userId, userId))
   }
 
+  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+    const user = await db.query.users.findFirst({ where: eq(users.id, userId) })
+    if (!user) throw { statusCode: 404, code: 'NOT_FOUND', message: 'User not found' }
+
+    const valid = await argon2.verify(user.passwordHash, currentPassword)
+    if (!valid) throw { statusCode: 401, code: 'INVALID_CREDENTIALS', message: 'Current password is incorrect' }
+
+    const newHash = await argon2.hash(newPassword, {
+      type: argon2.argon2id,
+      memoryCost: 65536,
+      timeCost: 3,
+      parallelism: 4,
+    })
+
+    await db.update(users).set({ passwordHash: newHash, updatedAt: new Date() }).where(eq(users.id, userId))
+  }
+
   private async generateTokenPair(
     userId: string,
     tenantId: string,

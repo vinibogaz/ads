@@ -31,8 +31,9 @@ export function LoginForm() {
         return
       }
 
-      setTokens(data.data.accessToken, data.data.refreshToken)
+      setTokens(data.data.accessToken)
       router.push('/dashboard')
+      router.refresh()
     } catch {
       setError('Erro de conexão. Verifique sua internet.')
     } finally {
@@ -63,9 +64,6 @@ export function LoginForm() {
           <label htmlFor="password" className="block text-sm font-medium text-sx-text-2">
             Senha
           </label>
-          <a href="/forgot-password" className="text-xs text-sx-primary hover:underline">
-            Esqueceu a senha?
-          </a>
         </div>
         <input
           id="password"
@@ -85,11 +83,7 @@ export function LoginForm() {
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="sx-btn-primary w-full py-2.5"
-      >
+      <button type="submit" disabled={loading} className="sx-btn-primary w-full py-2.5">
         {loading ? (
           <span className="flex items-center gap-2">
             <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
