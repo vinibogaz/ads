@@ -5,7 +5,9 @@
 
 import { useAuthStore } from '@/store/auth'
 
-const API_BASE = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:4000'
+// All client calls go through Next.js proxy (/api/v1/*) — same-origin, no CORS issues
+// The proxy route forwards to the internal Docker API service
+const API_BASE = ''
 
 async function refreshAccessToken(): Promise<string | null> {
   const res = await fetch('/api/auth/refresh', { method: 'POST' })

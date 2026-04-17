@@ -3,7 +3,8 @@ version: '3.9'
 # SYNTHEX PRODUCTION — VPS Deployment
 # Projeto isolado: docker compose -p synthex -f docker-compose.prod.yml up -d
 # Reusa PostgreSQL 15 existente no VPS (não cria container novo)
-# Portas: API 4000, Web 4001 (não conflitam com serviços existentes)
+# Portas: API 4000, Web 4001 (fallback direto)
+# Traefik roteia via subdomínio (ver infra/scripts/setup-traefik.sh)
 
 services:
   redis:
@@ -50,6 +51,12 @@ services:
       - synthex-internal
       - synthex-external
       - synthex-data
+      - traefik-public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.synthex-api.rule=Host(`${DOMAIN_API:-api-synthex.srv1110963.hstgr.cloud}`)"
+      - "traefik.http.routers.synthex-api.entrypoints=${TRAEFIK_ENTRYPOINT:-web}"
+      - "traefik.http.services.synthex-api.loadbalancer.server.port=4000"
     depends_on:
       redis:
         condition: service_healthy
@@ -109,10 +116,14 @@ services:
     ports:
       - '4001:3000'
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      # INTERNAL_API_URL: Docker-internal URL used by server-side proxy routes
+      INTERNAL_API_URL: http://synthex-api:4000
+      # NEXT_PUBLIC_API_URL: kept for backwards compat, only used server-side now
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://synthex-api:4000}
     networks:
       - synthex-internal
       - synthex-external
+      - traefik-public
     depends_on:
       - api
     healthcheck:
@@ -124,6 +135,11 @@ services:
       resources:
         limits:
           memory: 1G
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.synthex-web.rule=Host(`${DOMAIN_WEB:-synthex.srv1110963.hstgr.cloud}`)"
+      - "traefik.http.routers.synthex-web.entrypoints=${TRAEFIK_ENTRYPOINT:-web}"
+      - "traefik.http.services.synthex-web.loadbalancer.server.port=3000"
 
 networks:
   synthex-internal:
@@ -134,6 +150,11 @@ networks:
   synthex-data:
     # Rede persistente para acesso ao evolution_postgres
     # Criada em deploy.sh e nunca deletada pelo compose down
+    external: true
+  traefik-public:
+    # Rede do Traefik — deve ser criada antes:
+    # docker network create traefik-public
+    # Verifique o nome real: docker network ls | grep traefik
     external: true
 
 volumes:
