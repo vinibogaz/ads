@@ -8,17 +8,17 @@ export const swaggerPlugin = fp(async (app: FastifyInstance) => {
     openapi: {
       openapi: '3.0.0',
       info: {
-        title: 'Synthex API',
-        description: 'Synthex Marketing Intelligence Hub — REST API',
+        title: 'ORFFIA API',
+        description: 'ORFFIA Marketing Intelligence Hub — REST API',
         version: '1.0.0',
         contact: {
-          name: 'Synthex',
-          url: 'https://synthex.com.br',
+          name: 'ORFFIA',
+          url: 'https://orffia.com.br',
         },
       },
       servers: [
         { url: 'http://localhost:3001', description: 'Development' },
-        { url: 'https://api.synthex.com.br', description: 'Production' },
+        { url: 'https://api.orffia.com.br', description: 'Production' },
       ],
       components: {
         securitySchemes: {

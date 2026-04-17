@@ -1,7 +1,7 @@
 version: '3.9'
 
-# SYNTHEX PRODUCTION — VPS Deployment
-# Projeto isolado: docker compose -p synthex -f docker-compose.prod.yml up -d
+# ORFFIA PRODUCTION — VPS Deployment
+# Projeto isolado: docker compose -p orffia -f docker-compose.prod.yml up -d
 # Reusa PostgreSQL 15 existente no VPS (não cria container novo)
 # Portas: API 4000, Web 4001 (fallback direto)
 # Traefik roteia via subdomínio (ver infra/scripts/setup-traefik.sh)
@@ -9,7 +9,7 @@ version: '3.9'
 services:
   redis:
     image: redis:7-alpine
-    container_name: synthex-redis
+    container_name: orffia-redis
     restart: always
     command: >
       redis-server
@@ -20,7 +20,7 @@ services:
     volumes:
       - redis_data:/data
     networks:
-      - synthex-internal
+      - orffia-internal
     healthcheck:
       test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD}', 'ping']
       interval: 10s
@@ -31,8 +31,8 @@ services:
     build:
       context: ../../
       dockerfile: apps/api/Dockerfile
-    image: synthex-api:latest
-    container_name: synthex-api
+    image: orffia-api:latest
+    container_name: orffia-api
     restart: always
     ports:
       - '4000:4000'
@@ -48,15 +48,15 @@ services:
       AI_WORKER_SECRET: ${AI_WORKER_SECRET}
       CORS_ORIGIN: ${CORS_ORIGIN}
     networks:
-      - synthex-internal
-      - synthex-external
-      - synthex-data
+      - orffia-internal
+      - orffia-external
+      - orffia-data
       - traefik-public
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.synthex-api.rule=Host(`${DOMAIN_API:-api-synthex.srv1110963.hstgr.cloud}`)"
-      - "traefik.http.routers.synthex-api.entrypoints=${TRAEFIK_ENTRYPOINT:-web}"
-      - "traefik.http.services.synthex-api.loadbalancer.server.port=4000"
+      - "traefik.http.routers.orffia-api.rule=Host(`${DOMAIN_API:-api-orffia.srv1110963.hstgr.cloud}`)"
+      - "traefik.http.routers.orffia-api.entrypoints=${TRAEFIK_ENTRYPOINT:-web}"
+      - "traefik.http.services.orffia-api.loadbalancer.server.port=4000"
     depends_on:
       redis:
         condition: service_healthy
@@ -80,8 +80,8 @@ services:
     build:
       context: ../../
       dockerfile: apps/ai-worker/Dockerfile
-    image: synthex-ai-worker:latest
-    container_name: synthex-ai-worker
+    image: orffia-ai-worker:latest
+    container_name: orffia-ai-worker
     restart: always
     environment:
       PORT: 8000
@@ -91,8 +91,8 @@ services:
       REDIS_URL: ${REDIS_URL}
       DATABASE_URL: ${DATABASE_URL}
     networks:
-      - synthex-internal
-      - synthex-data
+      - orffia-internal
+      - orffia-data
     depends_on:
       redis:
         condition: service_healthy
@@ -110,19 +110,19 @@ services:
     build:
       context: ../../
       dockerfile: apps/web/Dockerfile
-    image: synthex-web:latest
-    container_name: synthex-web
+    image: orffia-web:latest
+    container_name: orffia-web
     restart: always
     ports:
       - '4001:3000'
     environment:
       # INTERNAL_API_URL: Docker-internal URL used by server-side proxy routes
-      INTERNAL_API_URL: http://synthex-api:4000
+      INTERNAL_API_URL: http://orffia-api:4000
       # NEXT_PUBLIC_API_URL: kept for backwards compat, only used server-side now
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://synthex-api:4000}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://orffia-api:4000}
     networks:
-      - synthex-internal
-      - synthex-external
+      - orffia-internal
+      - orffia-external
       - traefik-public
     depends_on:
       - api
@@ -137,17 +137,17 @@ services:
           memory: 1G
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.synthex-web.rule=Host(`${DOMAIN_WEB:-synthex.srv1110963.hstgr.cloud}`)"
-      - "traefik.http.routers.synthex-web.entrypoints=${TRAEFIK_ENTRYPOINT:-web}"
-      - "traefik.http.services.synthex-web.loadbalancer.server.port=3000"
+      - "traefik.http.routers.orffia-web.rule=Host(`${DOMAIN_WEB:-orffia.srv1110963.hstgr.cloud}`)"
+      - "traefik.http.routers.orffia-web.entrypoints=${TRAEFIK_ENTRYPOINT:-web}"
+      - "traefik.http.services.orffia-web.loadbalancer.server.port=3000"
 
 networks:
-  synthex-internal:
+  orffia-internal:
     driver: bridge
     internal: true
-  synthex-external:
+  orffia-external:
     driver: bridge
-  synthex-data:
+  orffia-data:
     # Rede persistente para acesso ao evolution_postgres
     # Criada em deploy.sh e nunca deletada pelo compose down
     external: true

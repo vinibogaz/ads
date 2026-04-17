@@ -1,6 +1,6 @@
 #!/bin/bash
 # deploy.sh — Script de deploy completo no VPS
-# Executar de /opt/synthex: bash infra/scripts/deploy.sh
+# Executar de /opt/orffia: bash infra/scripts/deploy.sh
 set -euo pipefail
 
 COMPOSE_FILE="infra/compose/docker-compose.prod.yml"
@@ -8,9 +8,9 @@ ENV_FILE=".env"
 DB_HOST="172.17.0.1"
 DB_USER="evolution"
 DB_PASS="evolution123"
-DB_NAME="synthex"
+DB_NAME="orffia"
 
-echo "=== Synthex Deploy ==="
+echo "=== ORFFIA Deploy ==="
 echo ""
 
 # 0. Verificar .env
@@ -27,8 +27,8 @@ echo "✅ .env carregado"
 
 echo ""
 echo "=== 1. Rede Docker persistente para PostgreSQL ==="
-docker network create synthex-data 2>/dev/null && echo "   Rede synthex-data criada" || echo "   Rede synthex-data já existe"
-docker network connect synthex-data evolution_postgres 2>/dev/null && echo "   evolution_postgres conectado" || echo "   evolution_postgres já na rede"
+docker network create orffia-data 2>/dev/null && echo "   Rede orffia-data criada" || echo "   Rede orffia-data já existe"
+docker network connect orffia-data evolution_postgres 2>/dev/null && echo "   evolution_postgres conectado" || echo "   evolution_postgres já na rede"
 echo "✅ Rede pronta"
 
 echo ""
@@ -47,14 +47,14 @@ echo "✅ Dependências instaladas"
 
 echo ""
 echo "=== 4. Build do pacote db ==="
-npm run build --workspace=@synthex/db
-echo "✅ Build @synthex/db concluído"
+npm run build --workspace=@orffia/db
+echo "✅ Build @orffia/db concluído"
 
 echo ""
 echo "=== 5. Aplicar schema ao banco (Drizzle push) ==="
 # Usar IP direto pois deploy roda no host, não no container
 DATABASE_URL="postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:5432/${DB_NAME}" \
-  npm run db:push --workspace=@synthex/db
+  npm run db:push --workspace=@orffia/db
 echo "✅ Schema aplicado"
 
 echo ""

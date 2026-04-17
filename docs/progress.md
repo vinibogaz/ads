@@ -5,12 +5,12 @@
 ### ✅ O que foi completado
 
 **Monorepo Turborepo** — 88 arquivos, 5.364 linhas:
-- `@synthex/shared` — Tipos TypeScript (auth, tenant, user, content, geo, api)
-- `@synthex/db` — Drizzle ORM + schema completo + RLS multi-tenant PostgreSQL
+- `@orffia/shared` — Tipos TypeScript (auth, tenant, user, content, geo, api)
+- `@orffia/db` — Drizzle ORM + schema completo + RLS multi-tenant PostgreSQL
 - `apps/api` — Fastify: JWT auth (access 15min + refresh 7d + rotação), RBAC, rate-limit, swagger
-- `apps/web` — Next.js 14 App Router: dark mode, Synthex DS tokens, login, dashboard
+- `apps/web` — Next.js 14 App Router: dark mode, ORFFIA DS tokens, login, dashboard
 - `apps/ai-worker` — Python FastAPI: GPT-4o + fallback Claude 3.5 Sonnet, scoring SEO/GEO
-- `@synthex/ui` — Design System: Button, Card, Badge, ScoreGauge, Spinner, Skeleton, Toast
+- `@orffia/ui` — Design System: Button, Card, Badge, ScoreGauge, Spinner, Skeleton, Toast
 
 **Infraestrutura:**
 - Docker Compose dev + prod (PostgreSQL 16+pgvector, Redis 7, Nginx TLS 1.3)
@@ -41,8 +41,8 @@ A configuração de deployment atual não segue as regras do Fundador especifica
 
 2. **Criar novos arquivos**:
    - README.md com "Deploy in 5 minutes" (max 5 comandos copy-paste)
-   - infra/scripts/init-database.sql (CREATE DATABASE synthex)
-   - infra/nginx/synthex-vhost.conf (config reverse proxy para Nginx existente)
+   - infra/scripts/init-database.sql (CREATE DATABASE orffia)
+   - infra/nginx/orffia-vhost.conf (config reverse proxy para Nginx existente)
 
 3. **Atualizar .env.example**:
    - Adicionar comentários explicativos em cada variável
@@ -52,7 +52,7 @@ A configuração de deployment atual não segue as regras do Fundador especifica
 - [x] Criar README.md com deployment simplificado
 - [x] Criar infra/scripts/init-database.sql
 - [x] Atualizar docker-compose.prod.yml (sem PostgreSQL, portas corretas, projeto separado)
-- [x] Criar infra/nginx/synthex-vhost.conf (reverse proxy)
+- [x] Criar infra/nginx/orffia-vhost.conf (reverse proxy)
 - [x] Melhorar .env.example com comentários
 - [x] Commit e atualizar SYN-7
 - [ ] Aguardar aprovação do Fundador
@@ -63,7 +63,7 @@ A configuração de deployment atual não segue as regras do Fundador especifica
 - `README.md` — Deploy em 5 minutos, estrutura do projeto, stack técnica
 - `docs/progress.md` — Tracking de progresso (política SYN-6)
 - `infra/scripts/init-database.sql` — Script SQL para criar database no PostgreSQL existente
-- `infra/nginx/synthex-vhost.conf` — Configuração Nginx reverse proxy (portas 4000/4001)
+- `infra/nginx/orffia-vhost.conf` — Configuração Nginx reverse proxy (portas 4000/4001)
 
 **Modificados:**
 - `.env.example` — Comentários detalhados em PT-BR, checklist pré-deploy, portas corrigidas (4000 API, 4001 web)
@@ -74,7 +74,7 @@ A configuração de deployment atual não segue as regras do Fundador especifica
 Deployment agora está 100% compatível com o VPS do Fundador:
 - ✅ Reusa PostgreSQL 15 existente (porta 5432) via `172.17.0.1`
 - ✅ Portas não conflitam: API 4000, Web 4001 (movAds usa 3001, Traefik usa 80/443)
-- ✅ Docker Compose isolado com projeto `synthex`
+- ✅ Docker Compose isolado com projeto `orffia`
 - ✅ README com 5 comandos copy-paste para deploy
 - ✅ Nginx vhost config separado (não interfere com Traefik/Nginx existente)
 - ✅ .env.example com instruções claras em PT-BR
@@ -109,7 +109,7 @@ Deployment agora está 100% compatível com o VPS do Fundador:
 - **62 arquivos** de código (TypeScript + Python)
 - **Monorepo Turborepo** completo
 - **Apps:** API (Fastify), Web (Next.js 14), AI Worker (FastAPI)
-- **Packages:** @synthex/db, @synthex/shared, @synthex/ui
+- **Packages:** @orffia/db, @orffia/shared, @orffia/ui
 - **Infra:** Docker Compose, GitHub Actions CI/CD, scripts de setup
 
 ### 🚀 Próximos Passos (Fundador)
@@ -117,7 +117,7 @@ Deployment agora está 100% compatível com o VPS do Fundador:
 Instruções completas de deployment postadas na [SYN-8](/SYN/issues/SYN-8):
 
 1. SSH no VPS (31.97.245.90)
-2. Clone do repo em `/opt/synthex`
+2. Clone do repo em `/opt/orffia`
 3. Configurar `.env` (database, secrets, API keys)
 4. Criar database no PostgreSQL 15 existente
 5. `docker compose up -d` + configurar Nginx reverse proxy
@@ -165,7 +165,7 @@ Instruções completas de deployment postadas na [SYN-8](/SYN/issues/SYN-8):
 **6. Documentação de Deploy** — Completa
 - README.md com 5 comandos copy-paste ✅
 - .env.example com comentários PT-BR detalhados ✅
-- infra/nginx/synthex-vhost.conf ✅
+- infra/nginx/orffia-vhost.conf ✅
 
 **7. Código no GitHub** — ✅
 - Repositório: https://github.com/vinibogaz/segeo-plataform
@@ -189,10 +189,10 @@ Instruções completas de deployment postadas na [SYN-8](/SYN/issues/SYN-8):
 **Ação necessária do Fundador:**
 
 1. SSH no VPS: `ssh root@31.97.245.90`
-2. Clonar repo: `git clone https://github.com/vinibogaz/segeo-plataform.git /opt/synthex`
+2. Clonar repo: `git clone https://github.com/vinibogaz/segeo-plataform.git /opt/orffia`
 3. Configurar .env (seguir .env.example)
-4. Criar database: `docker exec -i $(docker ps -q -f name=postgres) psql -U postgres < /opt/synthex/infra/scripts/init-database.sql`
-5. Deploy: `cd /opt/synthex/infra/compose && docker compose -p synthex -f docker-compose.prod.yml up -d`
+4. Criar database: `docker exec -i $(docker ps -q -f name=postgres) psql -U postgres < /opt/orffia/infra/scripts/init-database.sql`
+5. Deploy: `cd /opt/orffia/infra/compose && docker compose -p orffia -f docker-compose.prod.yml up -d`
 
 **Endpoints pós-deploy:**
 - Web: http://31.97.245.90:4001

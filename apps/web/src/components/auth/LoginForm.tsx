@@ -44,7 +44,7 @@ export function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="email" className="block text-sm font-medium text-sx-text-2 mb-1.5">
+        <label htmlFor="email" className="block text-sm font-medium text-orf-text-2 mb-1.5">
           E-mail
         </label>
         <input
@@ -52,7 +52,7 @@ export function LoginForm() {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="sx-input"
+          className="orf-input"
           placeholder="seu@email.com"
           required
           autoComplete="email"
@@ -61,7 +61,7 @@ export function LoginForm() {
 
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <label htmlFor="password" className="block text-sm font-medium text-sx-text-2">
+          <label htmlFor="password" className="block text-sm font-medium text-orf-text-2">
             Senha
           </label>
         </div>
@@ -70,7 +70,7 @@ export function LoginForm() {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="sx-input"
+          className="orf-input"
           placeholder="••••••••"
           required
           autoComplete="current-password"
@@ -78,12 +78,12 @@ export function LoginForm() {
       </div>
 
       {error && (
-        <div className="text-sx-error text-sm bg-sx-error/10 border border-sx-error/20 rounded-sx-sm px-3 py-2">
+        <div className="text-orf-error text-sm bg-orf-error/10 border border-orf-error/20 rounded-orf-sm px-3 py-2">
           {error}
         </div>
       )}
 
-      <button type="submit" disabled={loading} className="sx-btn-primary w-full py-2.5">
+      <button type="submit" disabled={loading} className="orf-btn-primary w-full py-2.5">
         {loading ? (
           <span className="flex items-center gap-2">
             <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">

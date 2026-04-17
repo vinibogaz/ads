@@ -3,7 +3,7 @@
 # Run as root: bash setup-vps.sh
 set -euo pipefail
 
-echo "=== Synthex VPS Setup ==="
+echo "=== ORFFIA VPS Setup ==="
 
 # Update system
 apt-get update && apt-get upgrade -y
@@ -41,8 +41,8 @@ systemctl enable fail2ban
 systemctl start fail2ban
 
 # Create app directory
-mkdir -p /opt/synthex
-chown ubuntu:ubuntu /opt/synthex
+mkdir -p /opt/orffia
+chown ubuntu:ubuntu /opt/orffia
 
 # Setup swap (4GB)
 if [ ! -f /swapfile ]; then
@@ -68,8 +68,8 @@ EOF
 sysctl -p
 
 # Setup log rotation
-cat > /etc/logrotate.d/synthex << 'EOF'
-/opt/synthex/logs/*.log {
+cat > /etc/logrotate.d/orffia << 'EOF'
+/opt/orffia/logs/*.log {
     daily
     rotate 14
     compress
@@ -80,29 +80,29 @@ cat > /etc/logrotate.d/synthex << 'EOF'
 EOF
 
 # Setup backup cron (daily pg_dump to S3)
-cat > /opt/synthex/backup.sh << 'BACKUP'
+cat > /opt/orffia/backup.sh << 'BACKUP'
 #!/bin/bash
 set -e
 DATE=$(date +%Y%m%d-%H%M%S)
-BACKUP_FILE="/tmp/synthex-backup-$DATE.sql.gz"
+BACKUP_FILE="/tmp/orffia-backup-$DATE.sql.gz"
 
-docker exec synthex-postgres pg_dump \
-  -U synthex_app synthex | gzip > $BACKUP_FILE
+docker exec orffia-postgres pg_dump \
+  -U orffia_app orffia | gzip > $BACKUP_FILE
 
-aws s3 cp $BACKUP_FILE s3://synthex-backups/postgres/$DATE.sql.gz \
+aws s3 cp $BACKUP_FILE s3://orffia-backups/postgres/$DATE.sql.gz \
   --region sa-east-1 --storage-class STANDARD_IA
 
 rm -f $BACKUP_FILE
 echo "Backup completed: $DATE"
 BACKUP
-chmod +x /opt/synthex/backup.sh
+chmod +x /opt/orffia/backup.sh
 
-(crontab -l 2>/dev/null; echo "0 3 * * * /opt/synthex/backup.sh >> /var/log/synthex-backup.log 2>&1") | crontab -
+(crontab -l 2>/dev/null; echo "0 3 * * * /opt/orffia/backup.sh >> /var/log/orffia-backup.log 2>&1") | crontab -
 
 echo ""
 echo "=== VPS Setup Complete ==="
 echo "Next steps:"
-echo "1. Copy your .env.production to /opt/synthex/"
-echo "2. Copy docker-compose.prod.yml to /opt/synthex/infra/compose/"
-echo "3. Setup SSL: certbot certonly --nginx -d synthex.com.br"
+echo "1. Copy your .env.production to /opt/orffia/"
+echo "2. Copy docker-compose.prod.yml to /opt/orffia/infra/compose/"
+echo "3. Setup SSL: certbot certonly --nginx -d orffia.com.br"
 echo "4. Run: docker compose -f infra/compose/docker-compose.prod.yml up -d"

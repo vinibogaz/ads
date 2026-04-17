@@ -1,10 +1,10 @@
 #!/bin/bash
-# Cria o arquivo .env de produção em /opt/synthex/
+# Cria o arquivo .env de produção em /opt/orffia/
 # Executar no VPS: bash infra/scripts/create-env.sh
 # ⚠️  Preencha OPENAI_API_KEY e ANTHROPIC_API_KEY antes de usar
 set -euo pipefail
 
-ENV_FILE="/opt/synthex/.env"
+ENV_FILE="/opt/orffia/.env"
 
 if [ -f "$ENV_FILE" ]; then
   echo "⚠️  $ENV_FILE já existe. Fazendo backup..."
@@ -20,14 +20,14 @@ AI_WORKER_SECRET=$(openssl rand -hex 16)
 
 cat > "$ENV_FILE" << EOF
 # ====================
-# SYNTHEX — PRODUÇÃO
+# ORFFIA — PRODUÇÃO
 # ====================
 NODE_ENV=production
 PORT=4000
 LOG_LEVEL=info
 
-# DATABASE — evolution_postgres via rede synthex-data (persistente)
-DATABASE_URL=postgresql://evolution:evolution123@evolution_postgres:5432/synthex
+# DATABASE — evolution_postgres via rede orffia-data (persistente)
+DATABASE_URL=postgresql://evolution:evolution123@evolution_postgres:5432/orffia
 
 # REDIS
 REDIS_PASSWORD=${REDIS_PASSWORD}

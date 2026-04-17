@@ -1,5 +1,5 @@
 #!/bin/bash
-# setup-traefik.sh — Diagnóstico e configuração do Traefik para o Synthex
+# setup-traefik.sh — Diagnóstico e configuração do Traefik para o ORFFIA
 # Executar no VPS: bash infra/scripts/setup-traefik.sh
 set -euo pipefail
 
@@ -60,10 +60,10 @@ if [ "$TRAEFIK_NET" != "traefik-public" ]; then
   echo "   docker network connect traefik-public $TRAEFIK_CONTAINER"
 fi
 
-# 5. Conectar containers Synthex à rede do Traefik
+# 5. Conectar containers ORFFIA à rede do Traefik
 echo ""
-echo "=== Conectando containers Synthex ao Traefik ==="
-for container in synthex-web synthex-api; do
+echo "=== Conectando containers ORFFIA ao Traefik ==="
+for container in orffia-web orffia-api; do
   if docker ps --format '{{.Names}}' | grep -q "^${container}$"; then
     docker network connect traefik-public "$container" 2>/dev/null && \
       echo "✅ $container → traefik-public" || \
@@ -82,12 +82,12 @@ docker inspect "$TRAEFIK_CONTAINER" --format '{{range .Args}}{{.}} {{end}}' 2>/d
 echo ""
 echo "=== Status final ==="
 echo "   Acesse via subdomínio após reiniciar containers:"
-echo "   Web: http://synthex.srv1110963.hstgr.cloud"
-echo "   API: http://api-synthex.srv1110963.hstgr.cloud/health"
+echo "   Web: http://orffia.srv1110963.hstgr.cloud"
+echo "   API: http://api-orffia.srv1110963.hstgr.cloud/health"
 echo ""
 echo "   Ou via IP direto (fallback):"
 echo "   Web: http://164.163.195.86:4001"
 echo "   API: http://164.163.195.86:4000/health"
 echo ""
 echo "   Para reiniciar containers com nova config:"
-echo "   cd /opt/synthex && docker compose -f infra/compose/docker-compose.prod.yml up -d"
+echo "   cd /opt/orffia && docker compose -f infra/compose/docker-compose.prod.yml up -d"

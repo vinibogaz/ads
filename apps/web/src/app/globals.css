@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    /* Synthex Design System CSS Variables */
+    /* ORFFIA Design System CSS Variables */
     --color-bg: #0A0F1E;
     --color-surface: #111827;
     --color-surface-2: #1a2234;
@@ -77,68 +77,68 @@
 }
 
 @layer components {
-  .sx-card {
-    @apply bg-sx-surface rounded-sx-xl border border-sx-border p-6;
+  .orf-card {
+    @apply bg-orf-surface rounded-orf-xl border border-orf-border p-6;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.6);
   }
 
-  .sx-panel {
-    @apply bg-sx-surface-2 rounded-sx-2xl border border-sx-border;
+  .orf-panel {
+    @apply bg-orf-surface-2 rounded-orf-2xl border border-orf-border;
   }
 
-  .sx-input {
-    @apply w-full bg-sx-surface border border-sx-border rounded-sx-sm px-3 py-2
-           text-sx-text placeholder-sx-text-3 text-sm
-           focus:outline-none focus:ring-2 focus:ring-sx-primary focus:border-transparent
+  .orf-input {
+    @apply w-full bg-orf-surface border border-orf-border rounded-orf-sm px-3 py-2
+           text-orf-text placeholder-orf-text-3 text-sm
+           focus:outline-none focus:ring-2 focus:ring-orf-primary focus:border-transparent
            transition-colors;
   }
 
-  .sx-btn-primary {
+  .orf-btn-primary {
     @apply inline-flex items-center justify-center gap-2
-           bg-sx-primary hover:bg-sx-primary-hover
+           bg-orf-primary hover:bg-orf-primary-hover
            text-white font-medium text-sm
-           px-4 py-2 rounded-sx-sm
+           px-4 py-2 rounded-orf-sm
            transition-colors duration-150
-           focus-visible:ring-2 focus-visible:ring-sx-primary focus-visible:ring-offset-2 focus-visible:ring-offset-sx-bg
+           focus-visible:ring-2 focus-visible:ring-orf-primary focus-visible:ring-offset-2 focus-visible:ring-offset-orf-bg
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
-  .sx-btn-secondary {
+  .orf-btn-secondary {
     @apply inline-flex items-center justify-center gap-2
-           bg-transparent hover:bg-sx-surface-2
-           text-sx-text border border-sx-border hover:border-sx-border-2
+           bg-transparent hover:bg-orf-surface-2
+           text-orf-text border border-orf-border hover:border-orf-border-2
            font-medium text-sm
-           px-4 py-2 rounded-sx-sm
+           px-4 py-2 rounded-orf-sm
            transition-colors duration-150
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
-  .sx-btn-ghost {
+  .orf-btn-ghost {
     @apply inline-flex items-center justify-center gap-2
-           bg-transparent hover:bg-sx-surface-2
-           text-sx-text-2 hover:text-sx-text
+           bg-transparent hover:bg-orf-surface-2
+           text-orf-text-2 hover:text-orf-text
            font-medium text-sm
-           px-3 py-2 rounded-sx-sm
+           px-3 py-2 rounded-orf-sm
            transition-colors duration-150;
   }
 
-  .sx-badge {
+  .orf-badge {
     @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
   }
 
-  .sx-badge-success {
-    @apply sx-badge bg-sx-success/10 text-sx-success;
+  .orf-badge-success {
+    @apply orf-badge bg-orf-success/10 text-orf-success;
   }
 
-  .sx-badge-warning {
-    @apply sx-badge bg-sx-warning/10 text-sx-warning;
+  .orf-badge-warning {
+    @apply orf-badge bg-orf-warning/10 text-orf-warning;
   }
 
-  .sx-badge-error {
-    @apply sx-badge bg-sx-error/10 text-sx-error;
+  .orf-badge-error {
+    @apply orf-badge bg-orf-error/10 text-orf-error;
   }
 
-  .sx-badge-primary {
-    @apply sx-badge bg-sx-primary/10 text-sx-primary;
+  .orf-badge-primary {
+    @apply orf-badge bg-orf-primary/10 text-orf-primary;
   }
 }

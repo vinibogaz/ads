@@ -1,16 +1,16 @@
 #!/bin/bash
 # seed-admin.sh — Cria o primeiro tenant + usuário admin via API
-# Executar de /opt/synthex APÓS o deploy: bash infra/scripts/seed-admin.sh
+# Executar de /opt/orffia APÓS o deploy: bash infra/scripts/seed-admin.sh
 set -euo pipefail
 
 API_URL="http://localhost:4000/api/v1"
 
 # Configurar admin (pode sobrescrever via env vars)
-ADMIN_EMAIL="${ADMIN_EMAIL:-admin@synthex.io}"
+ADMIN_EMAIL="${ADMIN_EMAIL:-admin@orffia.io}"
 ADMIN_NAME="${ADMIN_NAME:-Admin}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-ChangeMe123!}"
-TENANT_NAME="${TENANT_NAME:-Synthex}"
-TENANT_SLUG="${TENANT_SLUG:-synthex}"
+TENANT_NAME="${TENANT_NAME:-ORFFIA}"
+TENANT_SLUG="${TENANT_SLUG:-orffia}"
 
 echo "=== Seed do Admin ==="
 echo "   Email: $ADMIN_EMAIL"
@@ -20,7 +20,7 @@ echo ""
 # Verificar se API está saudável
 if ! curl -sf http://localhost:4000/health > /dev/null; then
   echo "❌ API não está respondendo em localhost:4000"
-  echo "   Verifique com: docker logs synthex-api"
+  echo "   Verifique com: docker logs orffia-api"
   exit 1
 fi
 

@@ -39,8 +39,8 @@ jobs:
       postgres:
         image: pgvector/pgvector:pg16
         env:
-          POSTGRES_DB: synthex_test
-          POSTGRES_USER: synthex_app
+          POSTGRES_DB: orffia_test
+          POSTGRES_USER: orffia_app
           POSTGRES_PASSWORD: test_password
         options: >-
           --health-cmd pg_isready
@@ -74,20 +74,20 @@ jobs:
 
       - name: Run DB migrations
         env:
-          DATABASE_URL: postgresql://synthex_app:test_password@localhost:5432/synthex_test
-        run: npm run db:migrate --workspace=@synthex/db
+          DATABASE_URL: postgresql://orffia_app:test_password@localhost:5432/orffia_test
+        run: npm run db:migrate --workspace=@orffia/db
 
       - name: Run API tests
         env:
           NODE_ENV: test
-          DATABASE_URL: postgresql://synthex_app:test_password@localhost:5432/synthex_test
+          DATABASE_URL: postgresql://orffia_app:test_password@localhost:5432/orffia_test
           REDIS_URL: redis://localhost:6379
           JWT_ACCESS_SECRET: test_access_secret_min_32_chars_here_!!!
           JWT_REFRESH_SECRET: test_refresh_secret_min_32_chars_here!!!
           ENCRYPTION_KEY: test_encryption_key_exactly_64_hex_chars_000000000000000000000000
           AI_WORKER_URL: http://localhost:8000
           AI_WORKER_SECRET: test_worker_secret_16c
-        run: npm run test --workspace=@synthex/api
+        run: npm run test --workspace=@orffia/api
 
   test-ai-worker:
     name: Test AI Worker
@@ -138,7 +138,7 @@ jobs:
           file: infra/docker/Dockerfile.api
           target: production
           push: true
-          tags: ${{ steps.login-ecr.outputs.registry }}/synthex-api:${{ github.sha }},${{ steps.login-ecr.outputs.registry }}/synthex-api:latest
+          tags: ${{ steps.login-ecr.outputs.registry }}/orffia-api:${{ github.sha }},${{ steps.login-ecr.outputs.registry }}/orffia-api:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -149,7 +149,7 @@ jobs:
           file: infra/docker/Dockerfile.web
           target: production
           push: true
-          tags: ${{ steps.login-ecr.outputs.registry }}/synthex-web:${{ github.sha }},${{ steps.login-ecr.outputs.registry }}/synthex-web:latest
+          tags: ${{ steps.login-ecr.outputs.registry }}/orffia-web:${{ github.sha }},${{ steps.login-ecr.outputs.registry }}/orffia-web:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -160,7 +160,7 @@ jobs:
           file: infra/docker/Dockerfile.ai-worker
           target: production
           push: true
-          tags: ${{ steps.login-ecr.outputs.registry }}/synthex-ai-worker:${{ github.sha }},${{ steps.login-ecr.outputs.registry }}/synthex-ai-worker:latest
+          tags: ${{ steps.login-ecr.outputs.registry }}/orffia-ai-worker:${{ github.sha }},${{ steps.login-ecr.outputs.registry }}/orffia-ai-worker:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -195,7 +195,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             set -e
-            cd /opt/synthex
+            cd /opt/orffia
 
             # Pull latest images
             export ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}

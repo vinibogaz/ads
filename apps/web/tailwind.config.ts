@@ -1,6 +1,6 @@
 import type { Config } from 'tailwindcss'
 
-// Synthex Design System — color tokens
+// ORFFIA Design System — color tokens
 const config: Config = {
   content: [
     './src/**/*.{ts,tsx}',
@@ -10,37 +10,37 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Synthex DS tokens
-        'sx-bg': '#0A0F1E',
-        'sx-surface': '#111827',
-        'sx-surface-2': '#1a2234',
-        'sx-primary': '#6366F1',
-        'sx-primary-hover': '#4f52d4',
-        'sx-secondary': '#8B5CF6',
-        'sx-success': '#10B981',
-        'sx-warning': '#F59E0B',
-        'sx-error': '#EF4444',
-        'sx-text': '#F9FAFB',
-        'sx-text-2': '#9CA3AF',
-        'sx-text-3': '#6B7280',
-        'sx-border': '#1F2937',
-        'sx-border-2': '#374151',
+        // ORFFIA DS tokens
+        'orf-bg': '#0A0F1E',
+        'orf-surface': '#111827',
+        'orf-surface-2': '#1a2234',
+        'orf-primary': '#6366F1',
+        'orf-primary-hover': '#4f52d4',
+        'orf-secondary': '#8B5CF6',
+        'orf-success': '#10B981',
+        'orf-warning': '#F59E0B',
+        'orf-error': '#EF4444',
+        'orf-text': '#F9FAFB',
+        'orf-text-2': '#9CA3AF',
+        'orf-text-3': '#6B7280',
+        'orf-border': '#1F2937',
+        'orf-border-2': '#374151',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
       },
       borderRadius: {
-        'sx-sm': '6px',
-        'sx-md': '8px',
-        'sx-lg': '12px',
-        'sx-xl': '16px',
-        'sx-2xl': '20px',
+        'orf-sm': '6px',
+        'orf-md': '8px',
+        'orf-lg': '12px',
+        'orf-xl': '16px',
+        'orf-2xl': '20px',
       },
       boxShadow: {
-        'sx-glow': '0 0 0 2px rgba(99, 102, 241, 0.4)',
-        'sx-glow-lg': '0 0 20px rgba(99, 102, 241, 0.2)',
-        'sx-card': '0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.6)',
+        'orf-glow': '0 0 0 2px rgba(99, 102, 241, 0.4)',
+        'orf-glow-lg': '0 0 20px rgba(99, 102, 241, 0.2)',
+        'orf-card': '0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.6)',
       },
       animation: {
         'fade-in': 'fadeIn 0.2s ease-out',

@@ -1,8 +1,8 @@
 import type { FastifyInstance } from 'fastify'
 import { eq, and } from 'drizzle-orm'
-import { db, users, userInvitations } from '@synthex/db'
+import { db, users, userInvitations } from '@orffia/db'
 import { z } from 'zod'
-import { hasPermission, type UserRole } from '@synthex/shared'
+import { hasPermission, type UserRole } from '@orffia/shared'
 import { createHash, randomBytes } from 'crypto'
 
 const inviteSchema = z.object({

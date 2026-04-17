@@ -47,12 +47,12 @@ export function RegisterForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-sx-text-2 mb-1.5">Nome completo</label>
+        <label className="block text-sm font-medium text-orf-text-2 mb-1.5">Nome completo</label>
         <input
           type="text"
           value={form.name}
           onChange={set('name')}
-          className="sx-input"
+          className="orf-input"
           placeholder="Seu nome"
           required
           minLength={2}
@@ -60,12 +60,12 @@ export function RegisterForm() {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-sx-text-2 mb-1.5">E-mail</label>
+        <label className="block text-sm font-medium text-orf-text-2 mb-1.5">E-mail</label>
         <input
           type="email"
           value={form.email}
           onChange={set('email')}
-          className="sx-input"
+          className="orf-input"
           placeholder="seu@email.com"
           required
           autoComplete="email"
@@ -73,12 +73,12 @@ export function RegisterForm() {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-sx-text-2 mb-1.5">Nome da empresa / workspace</label>
+        <label className="block text-sm font-medium text-orf-text-2 mb-1.5">Nome da empresa / workspace</label>
         <input
           type="text"
           value={form.tenantName}
           onChange={set('tenantName')}
-          className="sx-input"
+          className="orf-input"
           placeholder="Minha Empresa"
           required
           minLength={2}
@@ -86,12 +86,12 @@ export function RegisterForm() {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-sx-text-2 mb-1.5">Senha</label>
+        <label className="block text-sm font-medium text-orf-text-2 mb-1.5">Senha</label>
         <input
           type="password"
           value={form.password}
           onChange={set('password')}
-          className="sx-input"
+          className="orf-input"
           placeholder="Mínimo 8 caracteres"
           required
           minLength={8}
@@ -100,12 +100,12 @@ export function RegisterForm() {
       </div>
 
       {error && (
-        <div className="text-sx-error text-sm bg-sx-error/10 border border-sx-error/20 rounded-sx-sm px-3 py-2">
+        <div className="text-orf-error text-sm bg-orf-error/10 border border-orf-error/20 rounded-orf-sm px-3 py-2">
           {error}
         </div>
       )}
 
-      <button type="submit" disabled={loading} className="sx-btn-primary w-full py-2.5">
+      <button type="submit" disabled={loading} className="orf-btn-primary w-full py-2.5">
         {loading ? 'Criando conta...' : 'Criar conta grátis'}
       </button>
     </form>

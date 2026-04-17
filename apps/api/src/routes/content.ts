@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { eq, and, desc } from 'drizzle-orm'
-import { db, articles, contentProjects } from '@synthex/db'
+import { db, articles, contentProjects } from '@orffia/db'
 import { z } from 'zod'
 import { env } from '../config/env.js'
 

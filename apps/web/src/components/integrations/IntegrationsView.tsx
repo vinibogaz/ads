@@ -123,10 +123,10 @@ const integrations: Integration[] = [
 ]
 
 const CATEGORY_COLORS: Record<string, string> = {
-  CMS: 'text-sx-primary bg-sx-primary/10',
-  SEO: 'text-sx-success bg-sx-success/10',
-  Analytics: 'text-sx-warning bg-sx-warning/10',
-  Ads: 'text-sx-secondary bg-sx-secondary/10',
+  CMS: 'text-orf-primary bg-orf-primary/10',
+  SEO: 'text-orf-success bg-orf-success/10',
+  Analytics: 'text-orf-warning bg-orf-warning/10',
+  Ads: 'text-orf-secondary bg-orf-secondary/10',
   Social: 'text-blue-400 bg-blue-400/10',
   Automação: 'text-orange-400 bg-orange-400/10',
   'E-commerce': 'text-green-400 bg-green-400/10',
@@ -146,67 +146,67 @@ export function IntegrationsView() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-sx-text">Integrações</h1>
-        <p className="text-sx-text-2 mt-1 text-sm">Conecte suas ferramentas e amplifique o poder do Synthex</p>
+        <h1 className="text-2xl font-bold text-orf-text">Integrações</h1>
+        <p className="text-orf-text-2 mt-1 text-sm">Conecte suas ferramentas e amplifique o poder do ORFFIA</p>
       </div>
 
       {/* Stats bar */}
-      <div className="flex items-center gap-6 p-4 rounded-sx-xl bg-sx-surface border border-sx-border">
+      <div className="flex items-center gap-6 p-4 rounded-orf-xl bg-orf-surface border border-orf-border">
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-sx-success animate-pulse" />
-          <span className="text-sm text-sx-text">{integrations.filter(i => i.status === 'connected').length} conectadas</span>
+          <div className="w-2 h-2 rounded-full bg-orf-success animate-pulse" />
+          <span className="text-sm text-orf-text">{integrations.filter(i => i.status === 'connected').length} conectadas</span>
         </div>
-        <div className="w-px h-4 bg-sx-border" />
-        <span className="text-sm text-sx-text-2">{integrations.length} disponíveis</span>
+        <div className="w-px h-4 bg-orf-border" />
+        <span className="text-sm text-orf-text-2">{integrations.length} disponíveis</span>
         <div className="flex-1" />
-        <span className="text-xs text-sx-text-3">Mais integrações em breve →</span>
+        <span className="text-xs text-orf-text-3">Mais integrações em breve →</span>
       </div>
 
       {categories.map(cat => (
         <div key={cat}>
           <div className="flex items-center gap-2 mb-4">
-            <span className={`sx-badge text-xs ${CATEGORY_COLORS[cat] ?? 'sx-badge-primary'}`}>{cat}</span>
-            <div className="flex-1 h-px bg-sx-border" />
+            <span className={`orf-badge text-xs ${CATEGORY_COLORS[cat] ?? 'orf-badge-primary'}`}>{cat}</span>
+            <div className="flex-1 h-px bg-orf-border" />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {integrations.filter(i => i.category === cat).map(integration => (
               <div
                 key={integration.id}
-                className={`sx-card group transition-all duration-200 ${
+                className={`orf-card group transition-all duration-200 ${
                   integration.status === 'available'
-                    ? 'hover:border-sx-primary/40 hover:shadow-sx-glow cursor-pointer'
+                    ? 'hover:border-orf-primary/40 hover:shadow-orf-glow cursor-pointer'
                     : 'opacity-60'
                 }`}
               >
                 <div className="flex items-start gap-4">
                   <div
-                    className="w-10 h-10 rounded-sx-md flex items-center justify-center shrink-0"
+                    className="w-10 h-10 rounded-orf-md flex items-center justify-center shrink-0"
                     style={{ backgroundColor: `${integration.color}15` }}
                   >
                     {integration.icon}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-medium text-sx-text text-sm">{integration.name}</h3>
+                      <h3 className="font-medium text-orf-text text-sm">{integration.name}</h3>
                       {integration.status === 'connected' && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-sx-success" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-orf-success" />
                       )}
                     </div>
-                    <p className="text-xs text-sx-text-3 leading-relaxed">{integration.description}</p>
+                    <p className="text-xs text-orf-text-3 leading-relaxed">{integration.description}</p>
                   </div>
                 </div>
 
                 <div className="mt-4 flex items-center justify-between">
                   {integration.status === 'connected' ? (
-                    <span className="sx-badge sx-badge-success">Conectado</span>
+                    <span className="orf-badge orf-badge-success">Conectado</span>
                   ) : integration.status === 'coming_soon' ? (
-                    <span className="sx-badge bg-sx-surface-2 text-sx-text-3">Em breve</span>
+                    <span className="orf-badge bg-orf-surface-2 text-orf-text-3">Em breve</span>
                   ) : (
                     <button
                       onClick={() => handleConnect(integration.id, integration.status)}
                       disabled={connecting === integration.id}
-                      className="sx-btn-secondary text-xs py-1.5 px-3 group-hover:border-sx-primary/60 group-hover:text-sx-primary transition-colors"
+                      className="orf-btn-secondary text-xs py-1.5 px-3 group-hover:border-orf-primary/60 group-hover:text-orf-primary transition-colors"
                     >
                       {connecting === integration.id ? 'Conectando...' : 'Conectar'}
                     </button>

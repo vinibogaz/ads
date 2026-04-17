@@ -3,11 +3,11 @@ version: '3.9'
 services:
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: synthex-postgres
+    container_name: orffia-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: synthex
-      POSTGRES_USER: synthex_app
+      POSTGRES_DB: orffia
+      POSTGRES_USER: orffia_app
       POSTGRES_PASSWORD: dev_password_change_in_prod
     ports:
       - '5432:5432'
@@ -15,14 +15,14 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./init-scripts:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U synthex_app -d synthex']
+      test: ['CMD-SHELL', 'pg_isready -U orffia_app -d orffia']
       interval: 5s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7-alpine
-    container_name: synthex-redis
+    container_name: orffia-redis
     restart: unless-stopped
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     ports:
@@ -40,12 +40,12 @@ services:
       context: ../../
       dockerfile: infra/docker/Dockerfile.api
       target: dev
-    container_name: synthex-api
+    container_name: orffia-api
     restart: unless-stopped
     environment:
       NODE_ENV: development
       PORT: 3001
-      DATABASE_URL: postgresql://synthex_app:dev_password_change_in_prod@postgres:5432/synthex
+      DATABASE_URL: postgresql://orffia_app:dev_password_change_in_prod@postgres:5432/orffia
       REDIS_URL: redis://redis:6379
       JWT_ACCESS_SECRET: dev_access_secret_min_32_chars_long_here
       JWT_REFRESH_SECRET: dev_refresh_secret_min_32_chars_long_here
@@ -69,7 +69,7 @@ services:
       context: ../../apps/ai-worker
       dockerfile: ../../infra/docker/Dockerfile.ai-worker
       target: dev
-    container_name: synthex-ai-worker
+    container_name: orffia-ai-worker
     restart: unless-stopped
     environment:
       PORT: 8000
@@ -78,7 +78,7 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       REDIS_URL: redis://redis:6379
-      DATABASE_URL: postgresql://synthex_app:dev_password_change_in_prod@postgres:5432/synthex
+      DATABASE_URL: postgresql://orffia_app:dev_password_change_in_prod@postgres:5432/orffia
     ports:
       - '8000:8000'
     volumes:
@@ -92,7 +92,7 @@ services:
       context: ../../
       dockerfile: infra/docker/Dockerfile.web
       target: dev
-    container_name: synthex-web
+    container_name: orffia-web
     restart: unless-stopped
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:3001

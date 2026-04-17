@@ -1,8 +1,8 @@
 import { eq, and } from 'drizzle-orm'
 import * as argon2 from 'argon2'
 import { createHash, randomBytes } from 'crypto'
-import { db, users, tenants, refreshTokens, passwordResetTokens } from '@synthex/db'
-import type { AuthTokens, JwtPayload, UserRole } from '@synthex/shared'
+import { db, users, tenants, refreshTokens, passwordResetTokens } from '@orffia/db'
+import type { AuthTokens, JwtPayload, UserRole } from '@orffia/shared'
 import type { FastifyInstance } from 'fastify'
 
 const ACCESS_TOKEN_EXPIRY_MS = 15 * 60 * 1000 // 15 min

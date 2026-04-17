@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '*.synthex.com.br',
+        hostname: '*.orffia.com.br',
       },
     ],
   },

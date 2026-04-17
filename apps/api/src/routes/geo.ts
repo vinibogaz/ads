@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { eq, and, desc } from 'drizzle-orm'
-import { db, geoMonitors, geoScores, geoAlerts } from '@synthex/db'
+import { db, geoMonitors, geoScores, geoAlerts } from '@orffia/db'
 import { z } from 'zod'
 import { env } from '../config/env.js'
 

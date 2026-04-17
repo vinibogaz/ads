@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "synthex-ai-worker"
+name = "orffia-ai-worker"
 version = "0.1.0"
-description = "Synthex AI Worker — content generation service"
+description = "ORFFIA AI Worker — content generation service"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115.6",

@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { eq } from 'drizzle-orm'
-import { db, users, consentRecords, auditLogs } from '@synthex/db'
+import { db, users, consentRecords, auditLogs } from '@orffia/db'
 import { z } from 'zod'
 
 const consentSchema = z.object({

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const API_URL = process.env['INTERNAL_API_URL'] ?? 'http://synthex-api:4000'
+const API_URL = process.env['INTERNAL_API_URL'] ?? 'http://orffia-api:4000'
 const REFRESH_TTL = 60 * 60 * 24 * 7
 
 export async function POST(request: NextRequest) {
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
   const response = NextResponse.json(data, { status: res.status })
 
   if (res.ok && data?.data?.refreshToken) {
-    response.cookies.set('synthex-refresh', data.data.refreshToken, {
+    response.cookies.set('orffia-refresh', data.data.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',

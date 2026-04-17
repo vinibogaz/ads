@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const API_URL = process.env['INTERNAL_API_URL'] ?? 'http://synthex-api:4000'
+const API_URL = process.env['INTERNAL_API_URL'] ?? 'http://orffia-api:4000'
 const REFRESH_TTL = 60 * 60 * 24 * 7
 
 export async function POST(request: NextRequest) {
-  const refreshToken = request.cookies.get('synthex-refresh')?.value
+  const refreshToken = request.cookies.get('orffia-refresh')?.value
 
   if (!refreshToken) {
     return NextResponse.json({ error: 'NO_SESSION' }, { status: 401 })
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
   const response = NextResponse.json(data, { status: res.status })
 
   if (res.ok && data?.data?.refreshToken) {
-    response.cookies.set('synthex-refresh', data.data.refreshToken, {
+    response.cookies.set('orffia-refresh', data.data.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       path: '/',
     })
   } else if (!res.ok) {
-    response.cookies.delete('synthex-refresh')
+    response.cookies.delete('orffia-refresh')
   }
 
   return response

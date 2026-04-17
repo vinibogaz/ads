@@ -1,4 +1,4 @@
-# Synthex — Marketing Intelligence Hub
+# ORFFIA — Marketing Intelligence Hub
 
 Plataforma SaaS modular de inteligência de marketing: SEO, GEO, Ads, CRO, Growth.
 
@@ -16,8 +16,8 @@ Plataforma SaaS modular de inteligência de marketing: SEO, GEO, Ads, CRO, Growt
 
 ```bash
 docker exec -i $(docker ps -q -f name=postgres) psql -U evolution << 'EOF'
-CREATE DATABASE synthex;
-\c synthex
+CREATE DATABASE orffia;
+\c orffia
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 EOF
@@ -29,8 +29,8 @@ EOF
 
 ```bash
 cd /opt
-git clone https://github.com/vinibogaz/segeo-plataform.git synthex
-cd synthex
+git clone https://github.com/vinibogaz/segeo-plataform.git orffia
+cd orffia
 ```
 
 **3. Configurar variáveis de ambiente**
@@ -44,7 +44,7 @@ nano .env  # Editar os valores (JWT secrets, API keys, DATABASE_URL)
 
 ```bash
 cd infra/compose
-docker compose -p synthex -f docker-compose.prod.yml up -d --build
+docker compose -p orffia -f docker-compose.prod.yml up -d --build
 ```
 
 **Nota:** O `--build` constrói as imagens Docker localmente (API, Web, AI Worker).
@@ -52,8 +52,8 @@ docker compose -p synthex -f docker-compose.prod.yml up -d --build
 **5. Configurar Nginx reverse proxy (opcional, se quiser domínio)**
 
 ```bash
-sudo cp ../nginx/synthex-vhost.conf /etc/nginx/sites-available/synthex
-sudo ln -s /etc/nginx/sites-available/synthex /etc/nginx/sites-enabled/
+sudo cp ../nginx/orffia-vhost.conf /etc/nginx/sites-available/orffia
+sudo ln -s /etc/nginx/sites-available/orffia /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
@@ -68,7 +68,7 @@ Se configurou Nginx com domínio: `https://seudominio.com`
 ## Estrutura do Projeto
 
 ```
-synthex/
+orffia/
 ├── apps/
 │   ├── api/          # Fastify API (Node.js 20, TypeScript)
 │   ├── web/          # Next.js 14 App Router (frontend)
@@ -76,7 +76,7 @@ synthex/
 ├── packages/
 │   ├── shared/       # Tipos TypeScript compartilhados
 │   ├── db/           # Drizzle ORM + schema PostgreSQL
-│   └── ui/           # Synthex Design System (componentes React)
+│   └── ui/           # ORFFIA Design System (componentes React)
 ├── infra/
 │   ├── compose/      # Docker Compose (dev + prod)
 │   ├── docker/       # Dockerfiles

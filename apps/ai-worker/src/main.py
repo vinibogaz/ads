@@ -12,15 +12,15 @@ logger = structlog.get_logger()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Starting Synthex AI Worker", version="0.1.0")
+    logger.info("Starting ORFFIA AI Worker", version="0.1.0")
     await queue_service.connect()
     yield
     await queue_service.disconnect()
-    logger.info("Synthex AI Worker stopped")
+    logger.info("ORFFIA AI Worker stopped")
 
 
 app = FastAPI(
-    title="Synthex AI Worker",
+    title="ORFFIA AI Worker",
     description="Content generation microservice — GPT-4o / Claude 3.5 Sonnet",
     version="0.1.0",
     lifespan=lifespan,

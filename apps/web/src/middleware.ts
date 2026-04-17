@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const AUTH_COOKIE = 'synthex-refresh'
+const AUTH_COOKIE = 'orffia-refresh'
 
 const PUBLIC_PATHS = ['/login', '/register', '/forgot-password']
 

@@ -13,7 +13,7 @@ interface ScheduledItem {
 }
 
 const TYPE_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
-  blog:     { label: 'Blog Post',  color: 'bg-sx-primary/10 border-sx-primary/30 text-sx-primary', dot: 'bg-sx-primary' },
+  blog:     { label: 'Blog Post',  color: 'bg-orf-primary/10 border-orf-primary/30 text-orf-primary', dot: 'bg-orf-primary' },
   social:   { label: 'Social',     color: 'bg-purple-500/10 border-purple-500/30 text-purple-400',  dot: 'bg-purple-400' },
   email:    { label: 'E-mail',     color: 'bg-amber-500/10 border-amber-500/30 text-amber-400',     dot: 'bg-amber-400' },
   video:    { label: 'Vídeo',      color: 'bg-rose-500/10 border-rose-500/30 text-rose-400',         dot: 'bg-rose-400' },
@@ -21,10 +21,10 @@ const TYPE_CONFIG: Record<string, { label: string; color: string; dot: string }>
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  draft:     'bg-sx-border text-sx-text-3',
-  review:    'sx-badge-primary',
-  scheduled: 'sx-badge-warning',
-  published: 'sx-badge-success',
+  draft:     'bg-orf-border text-orf-text-3',
+  review:    'orf-badge-primary',
+  scheduled: 'orf-badge-warning',
+  published: 'orf-badge-success',
 }
 
 // Mock data — in production this comes from /content/articles?scheduled=true
@@ -36,7 +36,7 @@ const MOCK_ITEMS: ScheduledItem[] = [
   { id: '5', title: 'Guia definitivo: Marketing de conteúdo com IA', type: 'blog', status: 'published', platform: 'WordPress', time: '10:00', dayOffset: 2 },
   { id: '6', title: 'Shorts: O que é GEO Monitor?', type: 'video', status: 'scheduled', platform: 'YouTube', time: '16:00', dayOffset: 2 },
   { id: '7', title: 'Comparativo: ChatGPT vs Gemini para conteúdo', type: 'blog', status: 'scheduled', platform: 'WordPress', time: '09:30', dayOffset: 3 },
-  { id: '8', title: 'Post: Cases de sucesso com Synthex', type: 'social', status: 'draft', platform: 'Instagram', time: '12:00', dayOffset: 4 },
+  { id: '8', title: 'Post: Cases de sucesso com ORFFIA', type: 'social', status: 'draft', platform: 'Instagram', time: '12:00', dayOffset: 4 },
   { id: '9', title: 'Webinar recap: SEO em 2025', type: 'blog', status: 'scheduled', platform: 'WordPress', time: '15:00', dayOffset: 5 },
   { id: '10', title: 'E-mail: Dicas semanais de SEO', type: 'email', status: 'scheduled', platform: 'Mailchimp', time: '09:00', dayOffset: 6 },
 ]
@@ -84,26 +84,26 @@ export function ScheduleView() {
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-sx-text">Agenda de Conteúdo</h1>
-          <p className="text-sx-text-2 mt-1 text-sm">Planejamento e publicações da semana</p>
+          <h1 className="text-2xl font-bold text-orf-text">Agenda de Conteúdo</h1>
+          <p className="text-orf-text-2 mt-1 text-sm">Planejamento e publicações da semana</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex bg-sx-surface-2 rounded-sx-sm p-0.5 border border-sx-border">
+          <div className="flex bg-orf-surface-2 rounded-orf-sm p-0.5 border border-orf-border">
             {(['week', 'list'] as const).map(v => (
               <button
                 key={v}
                 onClick={() => setView(v)}
                 className={`px-3 py-1.5 rounded-[5px] text-xs font-medium transition-all ${
                   view === v
-                    ? 'bg-sx-surface text-sx-text shadow-sm'
-                    : 'text-sx-text-3 hover:text-sx-text-2'
+                    ? 'bg-orf-surface text-orf-text shadow-sm'
+                    : 'text-orf-text-3 hover:text-orf-text-2'
                 }`}
               >
                 {v === 'week' ? 'Semana' : 'Lista'}
               </button>
             ))}
           </div>
-          <button className="sx-btn-primary flex items-center gap-2">
+          <button className="orf-btn-primary flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
@@ -115,12 +115,12 @@ export function ScheduleView() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {stats.map(stat => (
-          <div key={stat.label} className="sx-card">
+          <div key={stat.label} className="orf-card">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xl">{stat.icon}</span>
             </div>
-            <p className="text-2xl font-bold text-sx-text">{stat.value}</p>
-            <p className="text-xs text-sx-text-3 mt-1">{stat.label}</p>
+            <p className="text-2xl font-bold text-orf-text">{stat.value}</p>
+            <p className="text-xs text-orf-text-3 mt-1">{stat.label}</p>
           </div>
         ))}
       </div>
@@ -132,12 +132,12 @@ export function ScheduleView() {
       )}
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-4 pt-2 border-t border-sx-border">
-        <p className="text-xs text-sx-text-3 mr-2 self-center">Tipos:</p>
+      <div className="flex flex-wrap gap-4 pt-2 border-t border-orf-border">
+        <p className="text-xs text-orf-text-3 mr-2 self-center">Tipos:</p>
         {Object.entries(TYPE_CONFIG).map(([key, cfg]) => (
           <div key={key} className="flex items-center gap-1.5">
             <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
-            <span className="text-xs text-sx-text-3">{cfg.label}</span>
+            <span className="text-xs text-orf-text-3">{cfg.label}</span>
           </div>
         ))}
       </div>
@@ -166,24 +166,24 @@ function WeekView({
             key={i}
             className={`flex flex-col rounded-sx border transition-colors min-h-[200px] ${
               isToday
-                ? 'border-sx-primary/40 bg-sx-primary/5'
-                : 'border-sx-border bg-sx-surface'
+                ? 'border-orf-primary/40 bg-orf-primary/5'
+                : 'border-orf-border bg-orf-surface'
             } ${isPast ? 'opacity-60' : ''}`}
           >
             {/* Day header */}
             <div
               className={`px-2 py-2 border-b text-center ${
-                isToday ? 'border-sx-primary/20' : 'border-sx-border'
+                isToday ? 'border-orf-primary/20' : 'border-orf-border'
               }`}
             >
-              <p className="text-xs font-medium text-sx-text-3">{WEEK_DAYS[date.getDay()]}</p>
+              <p className="text-xs font-medium text-orf-text-3">{WEEK_DAYS[date.getDay()]}</p>
               <p
                 className={`text-lg font-bold mt-0.5 leading-none ${
                   isToday
-                    ? 'text-sx-primary'
+                    ? 'text-orf-primary'
                     : isPast
-                    ? 'text-sx-text-3'
-                    : 'text-sx-text'
+                    ? 'text-orf-text-3'
+                    : 'text-orf-text'
                 }`}
               >
                 {date.getDate()}
@@ -209,7 +209,7 @@ function WeekView({
                 )
               })}
               {items.length === 0 && (
-                <p className="text-[10px] text-sx-text-3 text-center mt-4 opacity-50">—</p>
+                <p className="text-[10px] text-orf-text-3 text-center mt-4 opacity-50">—</p>
               )}
             </div>
           </div>
@@ -250,29 +250,29 @@ function ListView({
         return (
           <div
             key={item.id}
-            className="sx-card hover:border-sx-border-2 transition-all duration-200 cursor-pointer group flex items-center gap-4"
+            className="orf-card hover:border-orf-border-2 transition-all duration-200 cursor-pointer group flex items-center gap-4"
           >
             <div className="text-center shrink-0 w-14">
-              <p className="text-xs text-sx-text-3 font-medium">{dateLabel.split(',')[0]}</p>
-              <p className="text-sx-text font-bold text-sm">{item.time ?? '—'}</p>
+              <p className="text-xs text-orf-text-3 font-medium">{dateLabel.split(',')[0]}</p>
+              <p className="text-orf-text font-bold text-sm">{item.time ?? '—'}</p>
             </div>
 
             <div className={`w-0.5 self-stretch rounded-full ${cfg.dot}`} />
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                <span className={`sx-badge border ${cfg.color} text-[10px]`}>{cfg.label}</span>
-                <span className={`sx-badge ${STATUS_STYLES[item.status]}`}>{item.status}</span>
+                <span className={`orf-badge border ${cfg.color} text-[10px]`}>{cfg.label}</span>
+                <span className={`orf-badge ${STATUS_STYLES[item.status]}`}>{item.status}</span>
                 {item.platform && (
-                  <span className="text-xs text-sx-text-3">{item.platform}</span>
+                  <span className="text-xs text-orf-text-3">{item.platform}</span>
                 )}
               </div>
-              <p className="text-sm font-medium text-sx-text group-hover:text-sx-primary transition-colors truncate">
+              <p className="text-sm font-medium text-orf-text group-hover:text-orf-primary transition-colors truncate">
                 {item.title}
               </p>
             </div>
 
-            <button className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-sx-text-3 hover:text-sx-primary p-1">
+            <button className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-orf-text-3 hover:text-orf-primary p-1">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>

@@ -65,14 +65,14 @@ export function Sidebar() {
   const pathname = usePathname()
 
   return (
-    <aside className="w-56 bg-sx-surface border-r border-sx-border flex flex-col shrink-0">
+    <aside className="w-56 bg-orf-surface border-r border-orf-border flex flex-col shrink-0">
       {/* Logo */}
-      <div className="px-4 py-5 border-b border-sx-border">
+      <div className="px-4 py-5 border-b border-orf-border">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-sx-sm bg-sx-primary flex items-center justify-center">
+          <div className="w-7 h-7 rounded-orf-sm bg-orf-primary flex items-center justify-center">
             <span className="text-white font-bold text-xs">S</span>
           </div>
-          <span className="font-bold text-sx-text text-sm">Synthex</span>
+          <span className="font-bold text-orf-text text-sm">ORFFIA</span>
         </div>
       </div>
 
@@ -84,10 +84,10 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-sx-sm text-sm transition-colors ${
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-orf-sm text-sm transition-colors ${
                 isActive
-                  ? 'bg-sx-primary/10 text-sx-primary font-medium'
-                  : 'text-sx-text-2 hover:text-sx-text hover:bg-sx-surface-2'
+                  ? 'bg-orf-primary/10 text-orf-primary font-medium'
+                  : 'text-orf-text-2 hover:text-orf-text hover:bg-orf-surface-2'
               }`}
             >
               {item.icon}
@@ -98,8 +98,8 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="px-4 py-4 border-t border-sx-border">
-        <p className="text-xs text-sx-text-3">v0.1.0 — Sprint 1</p>
+      <div className="px-4 py-4 border-t border-orf-border">
+        <p className="text-xs text-orf-text-3">v0.1.0 — Sprint 1</p>
       </div>
     </aside>
   )

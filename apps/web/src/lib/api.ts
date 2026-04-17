@@ -1,5 +1,5 @@
 /**
- * Authenticated API client for Synthex backend.
+ * Authenticated API client for ORFFIA backend.
  * Handles token refresh transparently.
  */
 

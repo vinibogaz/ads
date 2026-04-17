@@ -1,5 +1,5 @@
 {
-  "name": "@synthex/db",
+  "name": "@orffia/db",
   "version": "0.1.0",
   "private": true,
   "type": "module",

@@ -1,5 +1,5 @@
 {
-  "name": "synthex",
+  "name": "orffia",
   "version": "0.1.0",
   "private": true,
   "workspaces": [
@@ -12,16 +12,16 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "db:generate": "turbo run db:generate --filter=@synthex/db",
-    "db:migrate": "turbo run db:migrate --filter=@synthex/db",
-    "db:push": "turbo run db:push --filter=@synthex/db",
+    "db:generate": "turbo run db:generate --filter=@orffia/db",
+    "db:migrate": "turbo run db:migrate --filter=@orffia/db",
+    "db:push": "turbo run db:push --filter=@orffia/db",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\" --ignore-path .gitignore",
     "clean": "turbo run clean && rm -rf node_modules"
   },
   "devDependencies": {
-    "turbo": "^2.3.3",
     "prettier": "^3.4.2",
-    "typescript": "^5.7.3"
+    "turbo": "^2.3.3",
+    "typescript": "^5.9.3"
   },
   "engines": {
     "node": ">=20.0.0",
