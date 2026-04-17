@@ -51,10 +51,11 @@ services:
       - orffia-internal
       - orffia-external
       - orffia-data
-      - traefik-public
+      - root_default
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.orffia-api.rule=Host(`${DOMAIN_API:-api-orffia.srv1110963.hstgr.cloud}`)"
+      - "traefik.docker.network=root_default"
+      - "traefik.http.routers.orffia-api.rule=Host(`${DOMAIN_API:-api.orffia.com}`)"
       - "traefik.http.routers.orffia-api.entrypoints=${TRAEFIK_ENTRYPOINT:-web}"
       - "traefik.http.services.orffia-api.loadbalancer.server.port=4000"
     depends_on:
@@ -123,7 +124,7 @@ services:
     networks:
       - orffia-internal
       - orffia-external
-      - traefik-public
+      - root_default
     depends_on:
       - api
     healthcheck:
@@ -137,7 +138,8 @@ services:
           memory: 1G
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.orffia-web.rule=Host(`${DOMAIN_WEB:-orffia.srv1110963.hstgr.cloud}`)"
+      - "traefik.docker.network=root_default"
+      - "traefik.http.routers.orffia-web.rule=Host(`${DOMAIN_WEB:-orffia.com}`)"
       - "traefik.http.routers.orffia-web.entrypoints=${TRAEFIK_ENTRYPOINT:-web}"
       - "traefik.http.services.orffia-web.loadbalancer.server.port=3000"
 
@@ -151,10 +153,9 @@ networks:
     # Rede persistente para acesso ao evolution_postgres
     # Criada em deploy.sh e nunca deletada pelo compose down
     external: true
-  traefik-public:
-    # Rede do Traefik — deve ser criada antes:
-    # docker network create traefik-public
-    # Verifique o nome real: docker network ls | grep traefik
+  root_default:
+    # Rede do Traefik principal (compartilhada com n8n/outros serviços do VPS)
+    # Verificar: docker network ls | grep root_default
     external: true
 
 volumes:

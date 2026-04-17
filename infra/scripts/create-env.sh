@@ -50,11 +50,16 @@ AI_WORKER_SECRET=${AI_WORKER_SECRET}
 OPENAI_API_KEY=sk-proj-PREENCHER
 ANTHROPIC_API_KEY=sk-ant-PREENCHER
 
-# CORS — URL do frontend
-CORS_ORIGIN=http://164.163.195.86:4001
+# CORS — URL do frontend (domínio oficial)
+CORS_ORIGIN=https://orffia.com
 
 # FRONTEND
-NEXT_PUBLIC_API_URL=http://164.163.195.86:4000
+NEXT_PUBLIC_API_URL=https://api.orffia.com
+
+# TRAEFIK — Domínios de roteamento
+DOMAIN_WEB=orffia.com
+DOMAIN_API=api.orffia.com
+TRAEFIK_ENTRYPOINT=websecure
 
 # RATE LIMITING
 RATE_LIMIT_MAX=100
