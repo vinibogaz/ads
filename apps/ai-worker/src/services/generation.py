@@ -1,4 +1,5 @@
 import re
+import httpx
 from openai import AsyncOpenAI
 from anthropic import AsyncAnthropic
 import structlog
@@ -109,15 +110,24 @@ Remember: Primary keyword is "{req.primaryKeyword}". It MUST appear in H1 and fi
             )
             result["seoScore"] = seo_score
 
+            # Persist article to PostgreSQL via Node API callback
+            article_id = await GenerationService._persist_article(
+                tenant_id=tenant_id,
+                user_id=user_id,
+                job_id=job_id,
+                request=req,
+                result=result,
+            )
+
             await queue_service.set_job_status(
                 tenant_id,
                 job_id,
                 "completed",
                 100,
-                result=result,
+                result={**result, "articleId": article_id},
             )
 
-            logger.info("Article generation completed", job_id=job_id, seo_score=seo_score)
+            logger.info("Article generation completed", job_id=job_id, seo_score=seo_score, article_id=article_id)
 
         except Exception as e:
             logger.error("Article generation failed", job_id=job_id, error=str(e))
@@ -156,6 +166,47 @@ Remember: Primary keyword is "{req.primaryKeyword}". It MUST appear in H1 and fi
         if json_match:
             return json.loads(json_match.group())
         return json.loads(content)
+
+    @staticmethod
+    async def _persist_article(
+        tenant_id: str,
+        user_id: str,
+        job_id: str,
+        request: object,
+        result: dict,
+    ) -> str:
+        """POST generated article to Node API for DB persistence. Returns articleId."""
+        req = request  # type: ignore[assignment]
+        payload = {
+            "jobId": job_id,
+            "tenantId": tenant_id,
+            "createdBy": user_id,
+            "projectId": getattr(req, "projectId", None),
+            "format": req.format,  # type: ignore[attr-defined]
+            "title": result.get("title", req.primaryKeyword),  # type: ignore[attr-defined]
+            "content": result.get("content", ""),
+            "metaTitle": result.get("metaTitle"),
+            "metaDescription": result.get("metaDescription"),
+            "seoScore": result.get("seoScore"),
+            "wordCount": result.get("wordCount"),
+            "keywords": [req.primaryKeyword] + (req.secondaryKeywords or []),  # type: ignore[attr-defined]
+            "generationParams": {
+                "format": req.format,  # type: ignore[attr-defined]
+                "primaryKeyword": req.primaryKeyword,  # type: ignore[attr-defined]
+                "tone": req.tone,  # type: ignore[attr-defined]
+                "language": req.language,  # type: ignore[attr-defined]
+                "targetAudience": getattr(req, "targetAudience", None),
+            },
+        }
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                f"{settings.api_internal_url}/api/v1/content/internal/articles",
+                json=payload,
+                headers={"X-Worker-Secret": settings.worker_secret},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            return data["data"]["articleId"]
 
     @staticmethod
     def _compute_seo_score(content: str, keyword: str, checks: dict) -> int:

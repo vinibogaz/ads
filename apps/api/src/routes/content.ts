@@ -58,6 +58,73 @@ export async function contentRoutes(app: FastifyInstance) {
     }
   )
 
+  // POST /api/v1/content/internal/articles  (AI Worker → Node API callback, no JWT)
+  app.post(
+    '/internal/articles',
+    {
+      config: { skipAuth: true },
+      schema: { tags: ['internal'], summary: 'Internal: persist generated article from AI Worker' },
+    },
+    async (request, reply) => {
+      const workerSecret = (request.headers['x-worker-secret'] as string) ?? ''
+      if (workerSecret !== env.AI_WORKER_SECRET) {
+        return reply.status(401).send({ error: 'UNAUTHORIZED', statusCode: 401 })
+      }
+
+      const body = request.body as {
+        jobId: string
+        tenantId: string
+        createdBy: string
+        projectId?: string | null
+        format: string
+        title: string
+        content: string
+        metaTitle?: string | null
+        metaDescription?: string | null
+        seoScore?: number | null
+        wordCount?: number | null
+        keywords?: string[]
+        generationParams?: object | null
+      }
+
+      const slug = body.title
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .slice(0, 480)
+
+      const inserted = await db
+        .insert(articles)
+        .values({
+          tenantId: body.tenantId,
+          createdBy: body.createdBy,
+          projectId: body.projectId ?? null,
+          format: body.format as 'blog' | 'listicle' | 'how-to' | 'news' | 'comparison' | 'opinion' | 'product-review' | 'pillar',
+          title: body.title,
+          slug,
+          content: body.content,
+          metaTitle: body.metaTitle ?? null,
+          metaDescription: body.metaDescription ?? null,
+          seoScore: body.seoScore ?? null,
+          wordCount: body.wordCount ?? null,
+          keywords: body.keywords ?? [],
+          generationParams: body.generationParams ?? null,
+          status: 'draft',
+        })
+        .returning({ id: articles.id })
+
+      const articleId = inserted[0]!.id
+
+      // Update Redis job with articleId so polling client gets the reference
+      const jobKey = `job:${body.tenantId}:${body.jobId}`
+      const existing = await app.redis.get(jobKey)
+      const jobData = existing ? JSON.parse(existing) : {}
+      await app.redis.set(jobKey, JSON.stringify({ ...jobData, status: 'completed', progress: 100, articleId }), 'EX', 3600)
+
+      return reply.status(201).send({ data: { articleId } })
+    }
+  )
+
   // GET /api/v1/content/jobs/:jobId
   app.get(
     '/jobs/:jobId',

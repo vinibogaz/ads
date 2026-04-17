@@ -23,6 +23,7 @@ export const authPlugin = fp(async (app: FastifyInstance) => {
   })
 
   app.decorate('authenticate', async (request: FastifyRequest) => {
+    if ((request.routeOptions as any).config?.skipAuth) return
     try {
       await request.jwtVerify()
     } catch (error: unknown) {

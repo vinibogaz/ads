@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     # Database
     database_url: str
 
+    # Internal API callback URL (used to persist generated content)
+    api_internal_url: str = "http://api:4000"
+
     # Limits
     max_article_tokens: int = 8000
     max_concurrent_jobs: int = 10
