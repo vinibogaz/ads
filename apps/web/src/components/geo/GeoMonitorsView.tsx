@@ -80,6 +80,7 @@ export function GeoMonitorsView() {
     brandAliases: '',
     competitors: '',
     keywords: '',
+    targetUrls: '',
     engines: ALL_ENGINES,
     frequency: 'daily',
   })
@@ -140,12 +141,13 @@ export function GeoMonitorsView() {
           brandAliases: form.brandAliases.split(',').map((s) => s.trim()).filter(Boolean),
           competitors: form.competitors.split(',').map((s) => s.trim()).filter(Boolean),
           keywords: form.keywords.split(',').map((s) => s.trim()).filter(Boolean),
+          targetUrls: form.targetUrls.split(',').map((s) => s.trim()).filter(Boolean),
           engines: form.engines,
           frequency: form.frequency,
         }),
       })
       setShowForm(false)
-      setForm({ brandName: '', brandAliases: '', competitors: '', keywords: '', engines: ALL_ENGINES, frequency: 'daily' })
+      setForm({ brandName: '', brandAliases: '', competitors: '', keywords: '', targetUrls: '', engines: ALL_ENGINES, frequency: 'daily' })
       load()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erro ao criar monitor')
@@ -242,6 +244,18 @@ export function GeoMonitorsView() {
               value={form.keywords}
               onChange={(e) => setForm((f) => ({ ...f, keywords: e.target.value }))}
               required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-orf-text-2 mb-1.5">
+              URLs alvo <span className="text-orf-text-3">(opcional — ex: livelo.com.br, livelo.com.br/ofertas)</span>
+            </label>
+            <input
+              className="orf-input"
+              placeholder="livelo.com.br, livelo.com.br/ofertas, livelo.com.br/viagens"
+              value={form.targetUrls}
+              onChange={(e) => setForm((f) => ({ ...f, targetUrls: e.target.value }))}
             />
           </div>
 

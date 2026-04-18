@@ -6,6 +6,7 @@ interface Integration {
   id: string
   name: string
   description: string
+  tooltip: string
   category: string
   status: 'available' | 'coming_soon' | 'connected'
   icon: React.ReactNode
@@ -18,6 +19,7 @@ const integrations: Integration[] = [
     id: 'wordpress',
     name: 'WordPress',
     description: 'Publique artigos diretamente no seu site WordPress via API REST',
+    tooltip: 'Necessário: URL do site WordPress + Application Password. Crie em: Usuários → Perfil → Application Passwords.',
     category: 'CMS',
     status: 'available',
     color: '#21759b',
@@ -31,6 +33,7 @@ const integrations: Integration[] = [
     id: 'ghost',
     name: 'Ghost',
     description: 'Publique conteúdo diretamente no seu site Ghost via Content API',
+    tooltip: 'Necessário: URL do Ghost + Staff API Key. Encontre em: Settings → Integrations → Add custom integration.',
     category: 'CMS',
     status: 'available',
     color: '#15171A',
@@ -44,6 +47,7 @@ const integrations: Integration[] = [
     id: 'webflow',
     name: 'Webflow',
     description: 'Sincronize conteúdo com coleções CMS do Webflow via API',
+    tooltip: 'Necessário: API Token do Webflow + Site ID + Collection ID. Acesse: Settings → Integrations → API Access.',
     category: 'CMS',
     status: 'coming_soon',
     color: '#4353FF',
@@ -58,6 +62,7 @@ const integrations: Integration[] = [
     id: 'gsc',
     name: 'Google Search Console',
     description: 'Importe dados de performance, impressões e CTR das suas páginas',
+    tooltip: 'Necessário: autorização OAuth com conta Google que tenha acesso ao GSC. Em breve via fluxo OAuth.',
     category: 'SEO',
     status: 'coming_soon',
     color: '#4285F4',
@@ -74,6 +79,7 @@ const integrations: Integration[] = [
     id: 'semrush',
     name: 'Semrush',
     description: 'Importe pesquisa de keywords, análise de concorrentes e backlinks',
+    tooltip: 'Necessário: API Key do Semrush. Acesse: Account → API → Generate API Key. Plano Guru ou superior.',
     category: 'SEO',
     status: 'coming_soon',
     color: '#FF642D',
@@ -87,6 +93,7 @@ const integrations: Integration[] = [
     id: 'ahrefs',
     name: 'Ahrefs',
     description: 'Monitore backlinks, autoridade de domínio e oportunidades de keywords',
+    tooltip: 'Necessário: API Key do Ahrefs. Acesse: Settings → API → Generate token. Plano Standard ou superior.',
     category: 'SEO',
     status: 'coming_soon',
     color: '#1E90FF',
@@ -101,6 +108,7 @@ const integrations: Integration[] = [
     id: 'ga4',
     name: 'Google Analytics 4',
     description: 'Conecte métricas de tráfego e conversão ao seu dashboard',
+    tooltip: 'Necessário: autorização OAuth com Google Analytics 4. Property ID e permissão de leitura necessários.',
     category: 'Analytics',
     status: 'coming_soon',
     color: '#E37400',
@@ -115,6 +123,7 @@ const integrations: Integration[] = [
     id: 'n8n',
     name: 'n8n',
     description: 'Automatize fluxos com o n8n self-hosted via webhooks e nós nativos',
+    tooltip: 'Necessário: URL do webhook n8n (ex: https://seu-n8n.com/webhook/xxxxx). Crie um fluxo com nó Webhook e copie a URL de produção.',
     category: 'Automação',
     status: 'available',
     color: '#EA4B71',
@@ -128,6 +137,7 @@ const integrations: Integration[] = [
     id: 'zapier',
     name: 'Zapier',
     description: 'Automatize fluxos com mais de 5.000 apps via Zapier webhooks',
+    tooltip: 'Necessário: URL do Webhooks by Zapier. Crie um Zap → Trigger "Webhooks by Zapier" → Catch Hook → copie a URL.',
     category: 'Automação',
     status: 'available',
     color: '#FF4A00',
@@ -142,6 +152,7 @@ const integrations: Integration[] = [
     id: 'linkedin',
     name: 'LinkedIn',
     description: 'Publique artigos e posts no LinkedIn diretamente da plataforma',
+    tooltip: 'Necessário: autorização OAuth com conta LinkedIn. Permissões: w_member_social, r_liteprofile.',
     category: 'Social',
     status: 'available',
     color: '#0A66C2',
@@ -156,6 +167,7 @@ const integrations: Integration[] = [
     id: 'shopify',
     name: 'Shopify',
     description: 'Gere descrições de produtos e SEO para sua loja Shopify',
+    tooltip: 'Necessário: Shopify Admin API Token + domínio da loja. Acesse: Apps → Develop apps → Create an app → Admin API.',
     category: 'E-commerce',
     status: 'coming_soon',
     color: '#95BF47',
@@ -257,6 +269,16 @@ export function IntegrationsView() {
                         {(integration.status === 'connected' || isSaved) && (
                           <span className="w-1.5 h-1.5 rounded-full bg-orf-success" />
                         )}
+                        {/* Native Tailwind tooltip */}
+                        <div className="relative ml-auto group/tip shrink-0">
+                          <button
+                            className="w-4 h-4 rounded-full bg-orf-surface-2 border border-orf-border text-orf-text-3 text-[10px] font-bold flex items-center justify-center hover:border-orf-primary/60 hover:text-orf-primary transition-colors"
+                            aria-label={`Como usar: ${integration.name}`}
+                          >?</button>
+                          <div className="absolute right-0 top-5 z-20 hidden group-hover/tip:block w-60 p-2.5 bg-orf-surface border border-orf-border rounded-orf-sm shadow-orf text-xs text-orf-text-2 leading-relaxed pointer-events-none">
+                            {integration.tooltip}
+                          </div>
+                        </div>
                       </div>
                       <p className="text-xs text-orf-text-3 leading-relaxed">{integration.description}</p>
                     </div>

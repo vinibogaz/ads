@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
-import { eq, and, desc } from 'drizzle-orm'
-import { db, articles, contentProjects } from '@orffia/db'
+import { eq, and, desc, gte, lte } from 'drizzle-orm'
+import { db, articles, contentProjects, contentSchedules, cmsIntegrations } from '@orffia/db'
 import { z } from 'zod'
 import { env } from '../config/env.js'
 
@@ -14,6 +14,7 @@ const generateArticleSchema = z.object({
   wordCount: z.number().min(300).max(10000).optional(),
   promptTemplateId: z.string().uuid().optional(),
   projectId: z.string().uuid().optional(),
+  sitemapUrl: z.string().url().optional(),
 })
 
 export async function contentRoutes(app: FastifyInstance) {
@@ -82,6 +83,8 @@ export async function contentRoutes(app: FastifyInstance) {
         metaTitle?: string | null
         metaDescription?: string | null
         seoScore?: number | null
+        seoBreakdown?: object | null
+        structuredData?: object | null
         wordCount?: number | null
         keywords?: string[]
         generationParams?: object | null
@@ -106,6 +109,8 @@ export async function contentRoutes(app: FastifyInstance) {
           metaTitle: body.metaTitle ?? null,
           metaDescription: body.metaDescription ?? null,
           seoScore: body.seoScore ?? null,
+          seoBreakdown: body.seoBreakdown ?? null,
+          structuredData: body.structuredData ?? null,
           wordCount: body.wordCount ?? null,
           keywords: body.keywords ?? [],
           generationParams: body.generationParams ?? null,
@@ -265,6 +270,72 @@ export async function contentRoutes(app: FastifyInstance) {
         .update(articles)
         .set({ status: 'archived', updatedAt: new Date() })
         .where(and(eq(articles.id, id), eq(articles.tenantId, request.user.tid)))
+
+      return reply.status(204).send()
+    }
+  )
+
+  // GET /api/v1/content/schedules
+  app.get(
+    '/schedules',
+    { schema: { tags: ['content'], summary: 'List content schedules' } },
+    async (request, reply) => {
+      const query = request.query as { days?: string }
+      const days = parseInt(query.days ?? '14')
+      const from = new Date()
+      const to = new Date(from)
+      to.setDate(to.getDate() + days)
+
+      const schedules = await db.query.contentSchedules.findMany({
+        where: and(
+          eq(contentSchedules.tenantId, request.user.tid),
+          gte(contentSchedules.scheduledAt, from),
+          lte(contentSchedules.scheduledAt, to),
+        ),
+        with: {
+          article: { columns: { id: true, title: true, format: true, slug: true } },
+          integration: { columns: { id: true, name: true, type: true } },
+        },
+        orderBy: [desc(contentSchedules.scheduledAt)],
+        limit: 100,
+      })
+
+      return reply.send({ data: schedules })
+    }
+  )
+
+  // POST /api/v1/content/schedules
+  app.post(
+    '/schedules',
+    { schema: { tags: ['content'], summary: 'Schedule article for publication' } },
+    async (request, reply) => {
+      const body = request.body as { articleId: string; integrationId: string; scheduledAt: string }
+
+      const [schedule] = await db
+        .insert(contentSchedules)
+        .values({
+          tenantId: request.user.tid,
+          articleId: body.articleId,
+          integrationId: body.integrationId,
+          scheduledAt: new Date(body.scheduledAt),
+        })
+        .returning()
+
+      return reply.status(201).send({ data: schedule })
+    }
+  )
+
+  // DELETE /api/v1/content/schedules/:id
+  app.delete(
+    '/schedules/:id',
+    { schema: { tags: ['content'], summary: 'Cancel scheduled publication' } },
+    async (request, reply) => {
+      const { id } = request.params as { id: string }
+
+      await db
+        .update(contentSchedules)
+        .set({ status: 'cancelled' })
+        .where(and(eq(contentSchedules.id, id), eq(contentSchedules.tenantId, request.user.tid)))
 
       return reply.status(204).send()
     }

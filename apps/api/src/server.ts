@@ -11,6 +11,7 @@ import { tenantRoutes } from './routes/tenants.js'
 import { userRoutes } from './routes/users.js'
 import { contentRoutes } from './routes/content.js'
 import { geoRoutes } from './routes/geo.js'
+import { integrationsRoutes } from './routes/integrations.js'
 import { privacyRoutes } from './routes/privacy.js'
 import { healthRoutes } from './routes/health.js'
 import { env } from './config/env.js'
@@ -48,6 +49,7 @@ await app.register(tenantRoutes, { prefix: '/api/v1/tenants' })
 await app.register(userRoutes, { prefix: '/api/v1/users' })
 await app.register(contentRoutes, { prefix: '/api/v1/content' })
 await app.register(geoRoutes, { prefix: '/api/v1/geo' })
+await app.register(integrationsRoutes, { prefix: '/api/v1/integrations' })
 await app.register(privacyRoutes, { prefix: '/api/v1/privacy' })
 
 // Global error handler

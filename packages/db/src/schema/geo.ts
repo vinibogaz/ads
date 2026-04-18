@@ -49,6 +49,7 @@ export const geoMonitors = pgTable('geo_monitors', {
   brandAliases: text('brand_aliases').array().notNull().default([]),
   competitors: text('competitors').array().notNull().default([]),
   keywords: text('keywords').array().notNull().default([]),
+  targetUrls: text('target_urls').array().notNull().default([]),
   engines: geoEngineEnum('engines')
     .array()
     .notNull()

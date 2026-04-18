@@ -9,6 +9,7 @@ const createMonitorSchema = z.object({
   brandAliases: z.array(z.string()).default([]),
   competitors: z.array(z.string()).default([]),
   keywords: z.array(z.string()).min(1),
+  targetUrls: z.array(z.string()).default([]),
   engines: z.array(z.enum(['chatgpt', 'gemini', 'claude', 'perplexity', 'grok'])).default([
     'chatgpt', 'gemini', 'claude', 'perplexity', 'grok',
   ]),

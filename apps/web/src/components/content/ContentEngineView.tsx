@@ -60,6 +60,7 @@ export function ContentEngineView() {
     wordCount: '800',
     targetAudience: '',
     secondaryKeywords: '',
+    sitemapUrl: '',
   })
 
   const load = async () => {
@@ -87,10 +88,11 @@ export function ContentEngineView() {
           ...form,
           wordCount: parseInt(form.wordCount) || 800,
           secondaryKeywords: form.secondaryKeywords.split(',').map(s => s.trim()).filter(Boolean),
+          sitemapUrl: form.sitemapUrl.trim() || undefined,
         }),
       })
       setShowForm(false)
-      setForm({ primaryKeyword: '', format: 'blog', tone: 'professional', language: 'pt-BR', wordCount: '800', targetAudience: '', secondaryKeywords: '' })
+      setForm({ primaryKeyword: '', format: 'blog', tone: 'professional', language: 'pt-BR', wordCount: '800', targetAudience: '', secondaryKeywords: '', sitemapUrl: '' })
       setTimeout(load, 2000)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao iniciar geração'
@@ -196,6 +198,19 @@ export function ContentEngineView() {
                 <label className="block text-sm font-medium text-orf-text-2 mb-1.5">Keywords secundárias <span className="text-orf-text-3">(vírgula)</span></label>
                 <input className="orf-input" placeholder="SEO, conteúdo, posicionamento" value={form.secondaryKeywords} onChange={e => setForm(f => ({ ...f, secondaryKeywords: e.target.value }))} />
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-orf-text-2 mb-1.5">
+                URL do Sitemap <span className="text-orf-text-3">(opcional — evita alucinações de links internos)</span>
+              </label>
+              <input
+                className="orf-input"
+                placeholder="https://seublog.com.br"
+                value={form.sitemapUrl}
+                onChange={e => setForm(f => ({ ...f, sitemapUrl: e.target.value }))}
+              />
+              <p className="text-xs text-orf-text-3 mt-1">A IA vai buscar o sitemap ou RSS e usar apenas URLs reais para cross-linking.</p>
             </div>
 
             {error && (

@@ -13,6 +13,7 @@ import {
 import { relations } from 'drizzle-orm'
 import { users } from './core.js'
 
+
 // Enums
 export const articleFormatEnum = pgEnum('article_format', [
   'blog',
@@ -97,6 +98,8 @@ export const articles = pgTable('articles', {
   keywords: text('keywords').array().notNull().default([]),
   wordCount: integer('word_count'),
   generationParams: jsonb('generation_params'),
+  seoBreakdown: jsonb('seo_breakdown'),
+  structuredData: jsonb('structured_data'),
   // embedding vector(1536) added via raw migration (drizzle-orm pgvector support)
   createdBy: uuid('created_by')
     .notNull()
@@ -215,5 +218,16 @@ export const articlesRelations = relations(articles, ({ one }) => ({
   createdByUser: one(users, {
     fields: [articles.createdBy],
     references: [users.id],
+  }),
+}))
+
+export const contentSchedulesRelations = relations(contentSchedules, ({ one }) => ({
+  article: one(articles, {
+    fields: [contentSchedules.articleId],
+    references: [articles.id],
+  }),
+  integration: one(cmsIntegrations, {
+    fields: [contentSchedules.integrationId],
+    references: [cmsIntegrations.id],
   }),
 }))
