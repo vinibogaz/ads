@@ -49,11 +49,25 @@ const integrations: Integration[] = [
     description: 'Sincronize conteúdo com coleções CMS do Webflow via API',
     tooltip: 'Necessário: API Token do Webflow + Site ID + Collection ID. Acesse: Settings → Integrations → API Access.',
     category: 'CMS',
-    status: 'coming_soon',
+    status: 'available',
     color: '#4353FF',
     icon: (
       <svg viewBox="0 0 24 24" className="w-6 h-6 fill-[#4353FF]">
         <path d="M17.83 7.17L13.1 19.8l-2.97-7.04-1.22 3.08L6.76 7.17H0l6.17 9.65 2.21-5.58 2.15 5.1L14.19 5.6l.85 2.13H24l-6.17 9.65V7.17z"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'wix',
+    name: 'Wix',
+    description: 'Publique e gerencie conteúdo no seu site Wix via Wix Headless API',
+    tooltip: 'Necessário: API Key do Wix + Site ID. Acesse: Wix Dashboard → Settings → Advanced → API Keys → Generate API Key.',
+    category: 'CMS',
+    status: 'available',
+    color: '#FAAD00',
+    icon: (
+      <svg viewBox="0 0 24 24" className="w-6 h-6" fill="#FAAD00">
+        <path d="M10.5 3.5L8 10 5.5 3.5H3L7 14h2l2.5-6.5L14 14h2l4-10.5h-2.5L15 10l-2.5-6.5z"/>
       </svg>
     ),
   },
@@ -62,9 +76,9 @@ const integrations: Integration[] = [
     id: 'gsc',
     name: 'Google Search Console',
     description: 'Importe dados de performance, impressões e CTR das suas páginas',
-    tooltip: 'Necessário: autorização OAuth com conta Google que tenha acesso ao GSC. Em breve via fluxo OAuth.',
+    tooltip: 'Necessário: Property URL do GSC. Após salvar, autorize o acesso OAuth na próxima etapa.',
     category: 'SEO',
-    status: 'coming_soon',
+    status: 'available',
     color: '#4285F4',
     icon: (
       <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current">
@@ -81,7 +95,7 @@ const integrations: Integration[] = [
     description: 'Importe pesquisa de keywords, análise de concorrentes e backlinks',
     tooltip: 'Necessário: API Key do Semrush. Acesse: Account → API → Generate API Key. Plano Guru ou superior.',
     category: 'SEO',
-    status: 'coming_soon',
+    status: 'available',
     color: '#FF642D',
     icon: (
       <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current text-[#FF642D]">
@@ -93,13 +107,27 @@ const integrations: Integration[] = [
     id: 'ahrefs',
     name: 'Ahrefs',
     description: 'Monitore backlinks, autoridade de domínio e oportunidades de keywords',
-    tooltip: 'Necessário: API Key do Ahrefs. Acesse: Settings → API → Generate token. Plano Standard ou superior.',
+    tooltip: 'Necessário: API Token do Ahrefs. Acesse: Settings → API → Generate token. Plano Standard ou superior.',
     category: 'SEO',
-    status: 'coming_soon',
+    status: 'available',
     color: '#1E90FF',
     icon: (
       <svg viewBox="0 0 24 24" className="w-6 h-6 fill-[#1E90FF]">
         <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zM9.5 16.5L6 8h2.5l2 5.5 2-5.5H15l-3.5 8.5H9.5z"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'bing',
+    name: 'Bing Search Console',
+    description: 'Monitore visibilidade, indexação e palavras-chave no Bing e DuckDuckGo',
+    tooltip: 'Necessário: Webmaster API Key do Bing. Acesse: bing.com/webmasters → Settings → API Access → Generate API Key.',
+    category: 'SEO',
+    status: 'available',
+    color: '#008373',
+    icon: (
+      <svg viewBox="0 0 24 24" className="w-6 h-6" fill="#008373">
+        <path d="M5 3v15.418L8.998 20.5l8.095-4.84-4.428-1.703 2.144-5.555L5 3zm0 0"/>
       </svg>
     ),
   },
@@ -169,7 +197,7 @@ const integrations: Integration[] = [
     description: 'Gere descrições de produtos e SEO para sua loja Shopify',
     tooltip: 'Necessário: Shopify Admin API Token + domínio da loja. Acesse: Apps → Develop apps → Create an app → Admin API.',
     category: 'E-commerce',
-    status: 'coming_soon',
+    status: 'available',
     color: '#95BF47',
     icon: (
       <svg viewBox="0 0 24 24" className="w-6 h-6 fill-[#95BF47]">
@@ -188,19 +216,78 @@ const CATEGORY_COLORS: Record<string, string> = {
   'E-commerce': 'text-green-400 bg-green-400/10',
 }
 
-// Integrations that require a webhook URL config before connecting
+// Integrations that use a webhook URL for connection
 const WEBHOOK_INTEGRATIONS = new Set(['zapier', 'n8n'])
+
+// Integrations that use API key / token configuration
+const API_CONFIG_INTEGRATIONS = new Set(['webflow', 'wix', 'shopify', 'gsc', 'semrush', 'ahrefs', 'bing', 'wordpress', 'ghost', 'linkedin'])
+
+type ConfigField = { key: string; label: string; placeholder: string; type?: string }
+
+const API_CONFIG_FIELDS: Record<string, ConfigField[]> = {
+  webflow: [
+    { key: 'apiToken', label: 'API Token', placeholder: 'Token do Webflow' },
+    { key: 'siteId', label: 'Site ID', placeholder: 'ID do site Webflow' },
+    { key: 'collectionId', label: 'Collection ID', placeholder: 'ID da coleção CMS' },
+  ],
+  wix: [
+    { key: 'apiKey', label: 'API Key', placeholder: 'API Key do Wix' },
+    { key: 'siteId', label: 'Site ID', placeholder: 'ID do site Wix' },
+  ],
+  shopify: [
+    { key: 'adminToken', label: 'Admin API Token', placeholder: 'shpat_xxxxxxxxxxxxxx' },
+    { key: 'shopDomain', label: 'Domínio da loja', placeholder: 'minhaloja.myshopify.com' },
+  ],
+  gsc: [
+    { key: 'propertyUrl', label: 'Property URL', placeholder: 'https://seusite.com.br' },
+  ],
+  semrush: [
+    { key: 'apiKey', label: 'API Key', placeholder: 'API Key do Semrush' },
+  ],
+  ahrefs: [
+    { key: 'apiToken', label: 'API Token', placeholder: 'Token do Ahrefs' },
+  ],
+  bing: [
+    { key: 'apiKey', label: 'Webmaster API Key', placeholder: 'API Key do Bing Webmaster' },
+    { key: 'siteUrl', label: 'URL do site', placeholder: 'https://seusite.com.br' },
+  ],
+  wordpress: [
+    { key: 'siteUrl', label: 'URL do site', placeholder: 'https://meusite.com.br' },
+    { key: 'appPassword', label: 'Application Password', placeholder: 'xxxx xxxx xxxx xxxx xxxx xxxx' },
+    { key: 'username', label: 'Usuário', placeholder: 'seu-usuario-wp' },
+  ],
+  ghost: [
+    { key: 'siteUrl', label: 'URL do Ghost', placeholder: 'https://meusite.ghost.io' },
+    { key: 'staffApiKey', label: 'Staff API Key', placeholder: 'Chave de integração Staff' },
+  ],
+  linkedin: [
+    { key: 'accessToken', label: 'Access Token', placeholder: 'Token OAuth do LinkedIn' },
+  ],
+}
 
 export function IntegrationsView() {
   const [connecting, setConnecting] = useState<string | null>(null)
+
+  // Webhook-based integrations
   const [webhookConfig, setWebhookConfig] = useState<Record<string, string>>({})
   const [webhookOpen, setWebhookOpen] = useState<string | null>(null)
   const [savedWebhooks, setSavedWebhooks] = useState<Record<string, string>>({})
+
+  // API key / token based integrations
+  const [apiConfigOpen, setApiConfigOpen] = useState<string | null>(null)
+  const [apiConfigValues, setApiConfigValues] = useState<Record<string, Record<string, string>>>({})
+  const [savedApiConfigs, setSavedApiConfigs] = useState<Record<string, Record<string, string>>>({})
+  const [apiConfigError, setApiConfigError] = useState<Record<string, string>>({})
 
   const handleConnect = (id: string, status: string) => {
     if (status !== 'available') return
     if (WEBHOOK_INTEGRATIONS.has(id)) {
       setWebhookOpen(open => open === id ? null : id)
+      return
+    }
+    if (API_CONFIG_INTEGRATIONS.has(id)) {
+      setApiConfigOpen(open => open === id ? null : id)
+      setApiConfigError(e => ({ ...e, [id]: '' }))
       return
     }
     setConnecting(id)
@@ -212,6 +299,27 @@ export function IntegrationsView() {
     if (!url) return
     setSavedWebhooks(s => ({ ...s, [id]: url }))
     setWebhookOpen(null)
+  }
+
+  const handleSaveApiConfig = (id: string) => {
+    const values = apiConfigValues[id] ?? {}
+    const fields = API_CONFIG_FIELDS[id] ?? []
+    const missing = fields.find(f => !values[f.key]?.trim())
+    if (missing) {
+      setApiConfigError(e => ({ ...e, [id]: `Preencha o campo: ${missing.label}` }))
+      return
+    }
+    setSavedApiConfigs(s => ({ ...s, [id]: values }))
+    setApiConfigOpen(null)
+    setApiConfigError(e => ({ ...e, [id]: '' }))
+  }
+
+  const handleDisconnect = (id: string) => {
+    if (WEBHOOK_INTEGRATIONS.has(id)) {
+      setSavedWebhooks(s => { const n = { ...s }; delete n[id]; return n })
+    } else {
+      setSavedApiConfigs(s => { const n = { ...s }; delete n[id]; return n })
+    }
   }
 
   const categories = [...new Set(integrations.map(i => i.category))]
@@ -227,10 +335,14 @@ export function IntegrationsView() {
       <div className="flex items-center gap-6 p-4 rounded-orf-xl bg-orf-surface border border-orf-border">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-orf-success animate-pulse" />
-          <span className="text-sm text-orf-text">{integrations.filter(i => i.status === 'connected').length} conectadas</span>
+          <span className="text-sm text-orf-text">
+            {Object.keys(savedWebhooks).length + Object.keys(savedApiConfigs).length} conectadas
+          </span>
         </div>
         <div className="w-px h-4 bg-orf-border" />
-        <span className="text-sm text-orf-text-2">{integrations.filter(i => i.status === 'available').length} disponíveis</span>
+        <span className="text-sm text-orf-text-2">
+          {integrations.filter(i => i.status === 'available').length} disponíveis
+        </span>
         <div className="flex-1" />
         <span className="text-xs text-orf-text-3">Mais integrações em breve →</span>
       </div>
@@ -244,8 +356,12 @@ export function IntegrationsView() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {integrations.filter(i => i.category === cat).map(integration => {
-              const isSaved = !!savedWebhooks[integration.id]
+              const isSavedWebhook = !!savedWebhooks[integration.id]
+              const isSavedApi = !!savedApiConfigs[integration.id]
+              const isSaved = isSavedWebhook || isSavedApi
               const isWebhookOpen = webhookOpen === integration.id
+              const isApiConfigOpen = apiConfigOpen === integration.id
+              const configFields = API_CONFIG_FIELDS[integration.id] ?? []
 
               return (
                 <div
@@ -266,10 +382,9 @@ export function IntegrationsView() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-medium text-orf-text text-sm">{integration.name}</h3>
-                        {(integration.status === 'connected' || isSaved) && (
+                        {isSaved && (
                           <span className="w-1.5 h-1.5 rounded-full bg-orf-success" />
                         )}
-                        {/* Native Tailwind tooltip */}
                         <div className="relative ml-auto group/tip shrink-0">
                           <button
                             className="w-4 h-4 rounded-full bg-orf-surface-2 border border-orf-border text-orf-text-3 text-[10px] font-bold flex items-center justify-center hover:border-orf-primary/60 hover:text-orf-primary transition-colors"
@@ -311,9 +426,55 @@ export function IntegrationsView() {
                     </div>
                   )}
 
+                  {/* API key config inline form */}
+                  {isApiConfigOpen && configFields.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-orf-border space-y-2.5">
+                      {configFields.map(field => (
+                        <div key={field.key}>
+                          <label className="text-xs text-orf-text-2 font-medium block mb-1">{field.label}</label>
+                          <input
+                            className="orf-input text-xs"
+                            placeholder={field.placeholder}
+                            type={field.type ?? 'text'}
+                            value={apiConfigValues[integration.id]?.[field.key] ?? ''}
+                            onChange={e => setApiConfigValues(c => ({
+                              ...c,
+                              [integration.id]: { ...(c[integration.id] ?? {}), [field.key]: e.target.value },
+                            }))}
+                          />
+                        </div>
+                      ))}
+                      {apiConfigError[integration.id] && (
+                        <p className="text-xs text-orf-error">{apiConfigError[integration.id]}</p>
+                      )}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleSaveApiConfig(integration.id)}
+                          className="orf-btn-primary text-xs py-1.5 px-3 flex-1"
+                        >
+                          Salvar
+                        </button>
+                        <button
+                          onClick={() => setApiConfigOpen(null)}
+                          className="orf-btn-ghost text-xs py-1.5 px-3"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="mt-4 flex items-center justify-between">
-                    {integration.status === 'connected' || isSaved ? (
-                      <span className="orf-badge orf-badge-success">Conectado</span>
+                    {isSaved ? (
+                      <div className="flex items-center gap-2">
+                        <span className="orf-badge orf-badge-success">Conectado</span>
+                        <button
+                          onClick={() => handleDisconnect(integration.id)}
+                          className="text-xs text-orf-text-3 hover:text-orf-error transition-colors"
+                        >
+                          Desconectar
+                        </button>
+                      </div>
                     ) : integration.status === 'coming_soon' ? (
                       <span className="orf-badge bg-orf-surface-2 text-orf-text-3">Em breve</span>
                     ) : (
@@ -322,7 +483,11 @@ export function IntegrationsView() {
                         disabled={connecting === integration.id}
                         className="orf-btn-secondary text-xs py-1.5 px-3 group-hover:border-orf-primary/60 group-hover:text-orf-primary transition-colors"
                       >
-                        {connecting === integration.id ? 'Conectando...' : isWebhookOpen ? 'Configurando...' : 'Conectar'}
+                        {connecting === integration.id
+                          ? 'Conectando...'
+                          : (isWebhookOpen || isApiConfigOpen)
+                          ? 'Configurando...'
+                          : 'Conectar'}
                       </button>
                     )}
                   </div>

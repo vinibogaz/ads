@@ -32,7 +32,8 @@ export async function apiRequest<T = unknown>(
   }
 
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    // Only set Content-Type when there is a body — Fastify rejects empty bodies with this header
+    ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
     ...(options.headers as Record<string, string>),
   }
   if (token) headers['Authorization'] = `Bearer ${token}`
