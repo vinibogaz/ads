@@ -1,0 +1,50 @@
+# traefik.yml — Configuração estática de referência para o Traefik do VPS
+# Se o Traefik foi instalado manualmente, este arquivo vai em /etc/traefik/traefik.yml
+# Se via Docker, montar como volume: -v ./traefik.yml:/etc/traefik/traefik.yml
+#
+# ⚠️  ATENÇÃO: Este arquivo é uma REFERÊNCIA.
+# O VPS pode já ter um Traefik configurado (ex: via n8n).
+# Verifique se o cert resolver 'letsencrypt' já existe antes de criar um novo.
+
+# --- Entrypoints ---
+entryPoints:
+  web:
+    address: ":80"
+    # Redirect HTTP → HTTPS globalmente (opcional — labels por serviço também funcionam)
+    # http:
+    #   redirections:
+    #     entryPoint:
+    #       to: websecure
+    #       scheme: https
+    #       permanent: true
+
+  websecure:
+    address: ":443"
+
+# --- Providers ---
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: root_default
+
+# --- Certificate Resolvers (Let's Encrypt) ---
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: admin@orffia.com     # ⚠️  Substitua pelo email real
+      storage: /letsencrypt/acme.json
+      # HTTP-01 challenge (requer porta 80 acessível publicamente)
+      httpChallenge:
+        entryPoint: web
+
+# --- API Dashboard (desabilitar em produção ou proteger com auth) ---
+api:
+  dashboard: false
+  insecure: false
+
+# --- Logs ---
+log:
+  level: INFO
+
+accessLog: {}
