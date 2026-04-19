@@ -31,7 +31,7 @@ COPY package.json turbo.json tsconfig.json ./
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Build using Turborepo
-RUN npm run build -- --filter=@synthex/web
+RUN npm run build -- --filter=@orffia/web
 
 # ==================== STAGE 3: Production Runtime ====================
 FROM node:20-alpine AS runner

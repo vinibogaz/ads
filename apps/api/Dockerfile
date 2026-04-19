@@ -29,7 +29,7 @@ COPY apps/api apps/api
 COPY package.json turbo.json tsconfig.json ./
 
 # Build using Turborepo
-RUN npm run build -- --filter=@synthex/api
+RUN npm run build -- --filter=@orffia/api
 
 # ==================== STAGE 3: Production Runtime ====================
 FROM node:20-alpine AS runner
@@ -47,7 +47,7 @@ RUN apk add --no-cache python3 make g++ curl && \
 COPY --from=builder --chown=apiuser:nodejs /app/apps/api/dist ./dist
 COPY --from=builder --chown=apiuser:nodejs /app/apps/api/package.json ./package.json
 
-# Copy workspace packages (needed for @synthex/* imports)
+# Copy workspace packages (needed for @orffia/* imports)
 COPY --from=builder --chown=apiuser:nodejs /app/packages ./packages
 COPY --from=deps --chown=apiuser:nodejs /app/node_modules ./node_modules
 
