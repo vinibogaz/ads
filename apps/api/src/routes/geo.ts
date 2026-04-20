@@ -12,6 +12,7 @@ import {
   geoCitedSources,
   geoMonitoredPages,
   geoSiteDiagnostics,
+  geoAiTraffic,
 } from '@orffia/db'
 import { z } from 'zod'
 import { env } from '../config/env.js'
@@ -779,6 +780,79 @@ export async function geoRoutes(app: FastifyInstance) {
       })
 
       return reply.send({ data: diagnostics })
+    }
+  )
+
+  // ─── Sprint 7 routes ────────────────────────────────────────────────────────
+
+  // POST /api/v1/geo/track  (public — no auth, used by client-side orffia.js)
+  app.post(
+    '/track',
+    {
+      config: { skipAuth: true },
+      schema: { tags: ['geo'], summary: 'Track AI referral visit' },
+    },
+    async (request, reply) => {
+      const body = z.object({
+        tenantId: z.string().uuid(),
+        source: z.string().min(1).max(50),
+        page: z.string().max(2000).optional(),
+        timestamp: z.string().optional(),
+      }).parse(request.body)
+
+      await db.insert(geoAiTraffic).values({
+        tenantId: body.tenantId,
+        source: body.source,
+        pageUrl: body.page ?? null,
+      })
+
+      return reply.status(201).send({ ok: true })
+    }
+  )
+
+  // GET /api/v1/geo/traffic
+  app.get(
+    '/traffic',
+    { schema: { tags: ['geo'], summary: 'Get AI traffic aggregation by source and period' } },
+    async (request, reply) => {
+      const query = request.query as { days?: string; source?: string }
+      const days = parseInt(query.days ?? '30', 10)
+      const tid = request.user.tid
+
+      const conditions = [
+        eq(geoAiTraffic.tenantId, tid),
+        sql`${geoAiTraffic.visitedAt} >= NOW() - INTERVAL '${sql.raw(String(days))} days'`,
+      ]
+      if (query.source) {
+        conditions.push(eq(geoAiTraffic.source, query.source))
+      }
+
+      const rows = await db
+        .select({
+          source: geoAiTraffic.source,
+          day: sql<string>`DATE(${geoAiTraffic.visitedAt})`,
+          visits: count(),
+        })
+        .from(geoAiTraffic)
+        .where(and(...conditions))
+        .groupBy(geoAiTraffic.source, sql`DATE(${geoAiTraffic.visitedAt})`)
+        .orderBy(sql`DATE(${geoAiTraffic.visitedAt}) ASC`)
+
+      // Totals per source
+      const totals = await db
+        .select({
+          source: geoAiTraffic.source,
+          total: count(),
+        })
+        .from(geoAiTraffic)
+        .where(and(
+          eq(geoAiTraffic.tenantId, tid),
+          sql`${geoAiTraffic.visitedAt} >= NOW() - INTERVAL '${sql.raw(String(days))} days'`,
+        ))
+        .groupBy(geoAiTraffic.source)
+        .orderBy(sql`2 DESC`)
+
+      return reply.send({ data: { rows, totals, days } })
     }
   )
 }

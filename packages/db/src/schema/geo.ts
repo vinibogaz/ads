@@ -278,3 +278,12 @@ export const geoSiteDiagnosticsRelations = relations(geoSiteDiagnostics, ({ one 
     references: [geoMonitors.id],
   }),
 }))
+
+// GEO AI TRAFFIC
+export const geoAiTraffic = pgTable('geo_ai_traffic', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  source: varchar('source', { length: 50 }).notNull(),
+  pageUrl: text('page_url'),
+  visitedAt: timestamp('visited_at', { withTimezone: true }).defaultNow().notNull(),
+})

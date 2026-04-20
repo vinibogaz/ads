@@ -12,6 +12,7 @@ const geoSubItems = [
   { label: 'Fontes Citadas', href: '/geo/sources' },
   { label: 'Páginas Monit.', href: '/geo/pages' },
   { label: 'Diagnóstico GEO', href: '/geo/diagnostic' },
+  { label: 'AI Traffic', href: '/geo/traffic' },
 ]
 
 const topNavItems = [
