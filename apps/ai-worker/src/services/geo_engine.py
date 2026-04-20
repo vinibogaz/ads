@@ -1,10 +1,13 @@
 """Motor real de consulta GEO — consulta APIs de LLMs."""
 import hashlib
+import logging
 import re
 from datetime import datetime
 from typing import Optional
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 _cache: dict[str, tuple[str, datetime]] = {}
 CACHE_TTL_HOURS = 24
@@ -91,7 +94,7 @@ async def query_engine(engine: str, prompt: str, api_keys: dict) -> Optional[str
             _cache[ck] = (text, datetime.utcnow())
             return text
         except Exception as e:
-            print(f"[GEO ENGINE ERROR] {engine}: {e}")
+            logger.error(f"[GEO ENGINE ERROR] {engine}: {e}")
             return None
 
 
