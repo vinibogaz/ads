@@ -128,11 +128,95 @@ export const geoAlerts = pgTable('geo_alerts', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
+// GEO PROMPTS
+export const geoPrompts = pgTable('geo_prompts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  monitorId: uuid('monitor_id').references(() => geoMonitors.id, { onDelete: 'cascade' }),
+  promptText: text('prompt_text').notNull(),
+  intentCluster: varchar('intent_cluster', { length: 50 }),
+  groupName: varchar('group_name', { length: 100 }),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+})
+
+// GEO PROMPT RESULTS
+export const geoPromptResults = pgTable('geo_prompt_results', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  promptId: uuid('prompt_id').references(() => geoPrompts.id, { onDelete: 'cascade' }),
+  engine: varchar('engine', { length: 20 }).notNull(),
+  responseText: text('response_text'),
+  brandMentioned: boolean('brand_mentioned').default(false),
+  mentionPosition: integer('mention_position').default(-1),
+  sentiment: numeric('sentiment', { precision: 4, scale: 2 }).default('0'),
+  context: varchar('context', { length: 500 }),
+  citedSources: text('cited_sources').array(),
+  collectedAt: timestamp('collected_at', { withTimezone: true }).defaultNow(),
+})
+
+// GEO COMPETITORS (Sprint 2 — per-tenant, per-monitor tracking)
+export const geoCompetitors = pgTable('geo_competitors', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  monitorId: uuid('monitor_id').references(() => geoMonitors.id, { onDelete: 'cascade' }),
+  brandName: varchar('brand_name', { length: 200 }).notNull(),
+  websiteUrl: varchar('website_url', { length: 500 }),
+  mentionCount: integer('mention_count').default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+})
+
+// GEO ACTION PLANS
+export const geoActionPlans = pgTable('geo_action_plans', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  promptId: uuid('prompt_id').references(() => geoPrompts.id, { onDelete: 'cascade' }),
+  title: varchar('title', { length: 300 }),
+  actions: jsonb('actions').notNull().default([]),
+  status: varchar('status', { length: 20 }).default('open'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+})
+
+// GEO CITED SOURCES
+export const geoCitedSources = pgTable('geo_cited_sources', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  domain: varchar('domain', { length: 500 }).notNull(),
+  fullUrl: text('full_url').notNull(),
+  promptId: uuid('prompt_id').references(() => geoPrompts.id, { onDelete: 'set null' }),
+  engine: varchar('engine', { length: 20 }),
+  collectedAt: timestamp('collected_at', { withTimezone: true }).defaultNow(),
+})
+
+// GEO MONITORED PAGES
+export const geoMonitoredPages = pgTable('geo_monitored_pages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  monitorId: uuid('monitor_id').references(() => geoMonitors.id, { onDelete: 'cascade' }),
+  pageUrl: text('page_url').notNull(),
+  citationCount: integer('citation_count').default(0),
+  addedAt: timestamp('added_at', { withTimezone: true }).defaultNow(),
+})
+
+// GEO SITE DIAGNOSTICS
+export const geoSiteDiagnostics = pgTable('geo_site_diagnostics', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  monitorId: uuid('monitor_id').references(() => geoMonitors.id, { onDelete: 'cascade' }),
+  targetUrl: text('target_url').notNull(),
+  geoReadinessScore: integer('geo_readiness_score').default(0),
+  findings: jsonb('findings').notNull().default([]),
+  analyzedAt: timestamp('analyzed_at', { withTimezone: true }).defaultNow(),
+})
+
 // Relations
 export const geoMonitorsRelations = relations(geoMonitors, ({ many }) => ({
   snapshots: many(geoSnapshots),
   scores: many(geoScores),
   alerts: many(geoAlerts),
+  prompts: many(geoPrompts),
+  competitors: many(geoCompetitors),
+  monitoredPages: many(geoMonitoredPages),
+  siteDiagnostics: many(geoSiteDiagnostics),
 }))
 
 export const geoSnapshotsRelations = relations(geoSnapshots, ({ one, many }) => ({
@@ -141,4 +225,56 @@ export const geoSnapshotsRelations = relations(geoSnapshots, ({ one, many }) => 
     references: [geoMonitors.id],
   }),
   mentions: many(geoMentions),
+}))
+
+export const geoPromptsRelations = relations(geoPrompts, ({ one, many }) => ({
+  monitor: one(geoMonitors, {
+    fields: [geoPrompts.monitorId],
+    references: [geoMonitors.id],
+  }),
+  results: many(geoPromptResults),
+  actionPlans: many(geoActionPlans),
+  citedSources: many(geoCitedSources),
+}))
+
+export const geoPromptResultsRelations = relations(geoPromptResults, ({ one }) => ({
+  prompt: one(geoPrompts, {
+    fields: [geoPromptResults.promptId],
+    references: [geoPrompts.id],
+  }),
+}))
+
+export const geoCompetitorsRelations = relations(geoCompetitors, ({ one }) => ({
+  monitor: one(geoMonitors, {
+    fields: [geoCompetitors.monitorId],
+    references: [geoMonitors.id],
+  }),
+}))
+
+export const geoActionPlansRelations = relations(geoActionPlans, ({ one }) => ({
+  prompt: one(geoPrompts, {
+    fields: [geoActionPlans.promptId],
+    references: [geoPrompts.id],
+  }),
+}))
+
+export const geoCitedSourcesRelations = relations(geoCitedSources, ({ one }) => ({
+  prompt: one(geoPrompts, {
+    fields: [geoCitedSources.promptId],
+    references: [geoPrompts.id],
+  }),
+}))
+
+export const geoMonitoredPagesRelations = relations(geoMonitoredPages, ({ one }) => ({
+  monitor: one(geoMonitors, {
+    fields: [geoMonitoredPages.monitorId],
+    references: [geoMonitors.id],
+  }),
+}))
+
+export const geoSiteDiagnosticsRelations = relations(geoSiteDiagnostics, ({ one }) => ({
+  monitor: one(geoMonitors, {
+    fields: [geoSiteDiagnostics.monitorId],
+    references: [geoMonitors.id],
+  }),
 }))
