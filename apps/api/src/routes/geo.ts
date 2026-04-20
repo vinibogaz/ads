@@ -169,6 +169,10 @@ export async function geoRoutes(app: FastifyInstance) {
           sentiment: string
           positionRank: number | null
         }>
+        citedSources?: Array<{
+          url: string
+          engine: string
+        }>
       }
 
       try {
@@ -230,6 +234,25 @@ export async function geoRoutes(app: FastifyInstance) {
           },
         })
         .returning()
+
+      // Persist cited sources from worker response (Sprint 5)
+      if (workerData.citedSources && workerData.citedSources.length > 0) {
+        const sourceRows = workerData.citedSources.map(cs => {
+          let domain = cs.url
+          try {
+            domain = new URL(cs.url).hostname.replace(/^www\./, '')
+          } catch {
+            // keep raw value if URL parsing fails
+          }
+          return {
+            tenantId: request.user.tid,
+            domain,
+            fullUrl: cs.url,
+            engine: cs.engine,
+          }
+        })
+        await db.insert(geoCitedSources).values(sourceRows)
+      }
 
       return reply.send({
         data: {
@@ -605,19 +628,45 @@ export async function geoRoutes(app: FastifyInstance) {
   // GET /api/v1/geo/sources
   app.get(
     '/sources',
-    { schema: { tags: ['geo'], summary: 'List cited sources' } },
+    { schema: { tags: ['geo'], summary: 'List cited sources aggregated by domain' } },
     async (request, reply) => {
-      const query = request.query as { engine?: string; promptId?: string }
-      const conditions = [eq(geoCitedSources.tenantId, request.user.tid)]
-      if (query.engine) conditions.push(eq(geoCitedSources.engine, query.engine))
-      if (query.promptId) conditions.push(eq(geoCitedSources.promptId, query.promptId))
+      const query = request.query as { engine?: string }
+      const tid = request.user.tid
 
-      const sources = await db.query.geoCitedSources.findMany({
-        where: and(...conditions),
-        orderBy: [desc(geoCitedSources.collectedAt)],
-        limit: 100,
-      })
-      return reply.send({ data: sources })
+      const [totalPromptsRow] = await db
+        .select({ value: count() })
+        .from(geoPrompts)
+        .where(eq(geoPrompts.tenantId, tid))
+      const totalPrompts = Number(totalPromptsRow?.value ?? 0)
+
+      const conditions = [eq(geoCitedSources.tenantId, tid)]
+      if (query.engine) conditions.push(eq(geoCitedSources.engine, query.engine))
+
+      const rows = await db
+        .select({
+          domain: geoCitedSources.domain,
+          pageCount: sql<string>`COUNT(DISTINCT ${geoCitedSources.fullUrl})`,
+          promptCount: sql<string>`COUNT(DISTINCT ${geoCitedSources.promptId})`,
+          engineCount: sql<string>`COUNT(DISTINCT ${geoCitedSources.engine})`,
+        })
+        .from(geoCitedSources)
+        .where(and(...conditions))
+        .groupBy(geoCitedSources.domain)
+        .orderBy(sql`COUNT(DISTINCT ${geoCitedSources.promptId}) DESC`)
+        .limit(100)
+
+      const data = rows.map(r => ({
+        domain: r.domain,
+        favicon_url: `https://www.google.com/s2/favicons?sz=32&domain=${encodeURIComponent(r.domain)}`,
+        page_count: Number(r.pageCount),
+        prompt_count: Number(r.promptCount),
+        engine_count: Number(r.engineCount),
+        impact_pct: totalPrompts > 0
+          ? parseFloat(((Number(r.promptCount) / totalPrompts) * 100).toFixed(2))
+          : 0,
+      }))
+
+      return reply.send({ data })
     }
   )
 
