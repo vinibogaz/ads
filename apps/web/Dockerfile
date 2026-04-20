@@ -29,6 +29,12 @@ COPY package.json turbo.json tsconfig.json ./
 
 # Next.js collects telemetry data (disable in production)
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV COREPACK_ENABLE_STRICT=0
+
+# Fix: Next.js SWC download calls 'yarn config get registry'; shim yarn to succeed
+RUN echo '#!/bin/sh' > /usr/local/bin/yarn \
+    && echo 'echo https://registry.npmjs.org/' >> /usr/local/bin/yarn \
+    && chmod +x /usr/local/bin/yarn
 
 # Build using Turborepo
 RUN npm run build -- --filter=@orffia/web
