@@ -2,8 +2,19 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState, useEffect } from 'react'
 
-const navItems = [
+const geoSubItems = [
+  { label: 'Dashboard', href: '/geo' },
+  { label: 'Prompts Monitorados', href: '/geo/prompts' },
+  { label: 'Concorrentes', href: '/geo/competitors' },
+  { label: 'Plano de Ação', href: '/geo/action-plans' },
+  { label: 'Fontes Citadas', href: '/geo/sources' },
+  { label: 'Páginas Monit.', href: '/geo/pages' },
+  { label: 'Diagnóstico GEO', href: '/geo/diagnostic' },
+]
+
+const topNavItems = [
   {
     label: 'Dashboard',
     href: '/dashboard',
@@ -22,15 +33,9 @@ const navItems = [
       </svg>
     ),
   },
-  {
-    label: 'GEO Monitor',
-    href: '/geo',
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-      </svg>
-    ),
-  },
+]
+
+const bottomNavItems = [
   {
     label: 'Agenda',
     href: '/schedule',
@@ -63,6 +68,12 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname()
+  const isGeoSection = pathname === '/geo' || pathname.startsWith('/geo/')
+  const [geoOpen, setGeoOpen] = useState(isGeoSection)
+
+  useEffect(() => {
+    if (isGeoSection) setGeoOpen(true)
+  }, [isGeoSection])
 
   return (
     <aside className="w-56 bg-orf-surface border-r border-orf-border flex flex-col shrink-0">
@@ -77,8 +88,9 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-2 py-4 space-y-0.5">
-        {navItems.map((item) => {
+      <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
+        {/* Top items */}
+        {topNavItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
           return (
             <Link
@@ -95,11 +107,81 @@ export function Sidebar() {
             </Link>
           )
         })}
+
+        {/* GEO Monitor section */}
+        <div className="pt-1">
+          <button
+            onClick={() => setGeoOpen((o) => !o)}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-orf-sm text-sm transition-colors ${
+              isGeoSection
+                ? 'bg-orf-primary/10 text-orf-primary font-medium'
+                : 'text-orf-text-2 hover:text-orf-text hover:bg-orf-surface-2'
+            }`}
+          >
+            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            <span className="flex-1 text-left">GEO Monitor</span>
+            <svg
+              className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${geoOpen ? 'rotate-180' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {geoOpen && (
+            <div className="mt-0.5 ml-3 pl-3 border-l border-orf-border space-y-0.5">
+              {geoSubItems.map((item) => {
+                const isActive =
+                  item.href === '/geo'
+                    ? pathname === '/geo'
+                    : pathname === item.href || pathname.startsWith(item.href + '/')
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-2 px-2.5 py-1.5 rounded-orf-sm text-xs transition-colors ${
+                      isActive
+                        ? 'bg-orf-primary/10 text-orf-primary font-medium'
+                        : 'text-orf-text-2 hover:text-orf-text hover:bg-orf-surface-2'
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Bottom items */}
+        <div className="pt-1">
+          {bottomNavItems.map((item) => {
+            const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-orf-sm text-sm transition-colors ${
+                  isActive
+                    ? 'bg-orf-primary/10 text-orf-primary font-medium'
+                    : 'text-orf-text-2 hover:text-orf-text hover:bg-orf-surface-2'
+                }`}
+              >
+                {item.icon}
+                {item.label}
+              </Link>
+            )
+          })}
+        </div>
       </nav>
 
       {/* Footer */}
       <div className="px-4 py-4 border-t border-orf-border">
-        <p className="text-xs text-orf-text-3">v0.1.0 — Sprint 1</p>
+        <p className="text-xs text-orf-text-3">v0.1.0 — Sprint 6</p>
       </div>
     </aside>
   )

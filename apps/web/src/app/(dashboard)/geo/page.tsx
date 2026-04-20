@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
-import { GeoMonitorsView } from '@/components/geo/GeoMonitorsView'
+import { GeoDashboard } from '@/components/geo/GeoDashboard'
 
-export const metadata: Metadata = { title: 'GEO Monitor' }
+export const metadata: Metadata = { title: 'GEO Monitor — Dashboard' }
 
 export default function GeoPage() {
-  return <GeoMonitorsView />
+  return <GeoDashboard />
 }
