@@ -10,8 +10,10 @@ class Settings(BaseSettings):
     worker_secret: str  # shared with API
 
     # AI Models
-    openai_api_key: str
-    anthropic_api_key: str
+    openai_api_key: str = ""
+    anthropic_api_key: str = ""
+    google_ai_api_key: str = ""
+    perplexity_api_key: str = ""
     primary_model: str = "gpt-4o"
     fallback_model: str = "claude-3-5-sonnet-20241022"
 

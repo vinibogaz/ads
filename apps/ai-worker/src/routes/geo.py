@@ -1,34 +1,30 @@
 """
-GEO (Generative Engine Optimization) collection route.
-Returns mock snapshot data — real LLM calls wired in future sprint.
+GEO (Generative Engine Optimization) collection route — real LLM engine.
 """
-import random
-import uuid
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 
 from ..config import settings
+from ..services.geo_engine import (
+    analyze_mention,
+    calculate_share_of_source,
+    extract_cited_sources,
+    query_engine,
+)
 
 router = APIRouter(tags=["geo"])
 
 Engine = Literal["chatgpt", "gemini", "claude", "perplexity", "grok"]
-
-ENGINE_PERSONAS: dict[str, str] = {
-    "chatgpt":   "Based on my knowledge, ",
-    "gemini":    "According to current information, ",
-    "claude":    "From what I understand, ",
-    "perplexity": "Sources indicate that ",
-    "grok":      "Here's what I found: ",
-}
 
 
 class CollectRequest(BaseModel):
     monitorId: str
     tenantId: str
     brandName: str
+    brandDomain: str = ""
     keywords: list[str]
     engines: list[Engine]
 
@@ -36,12 +32,15 @@ class CollectRequest(BaseModel):
 class MentionResult(BaseModel):
     engine: str
     keyword: str
-    prompt: str
-    response: str
+    prompt: str = ""
+    response: str = ""
     mentioned: bool
-    sentiment: Literal["positive", "neutral", "negative"]
-    positionRank: int | None
-    confidence: float
+    sentiment: float = 0.0
+    position: int = -1
+    context: str = ""
+    positionRank: Optional[int] = None
+    confidence: float = 0.0
+    citedSources: list[str] = []
 
 
 class SnapshotResult(BaseModel):
@@ -51,58 +50,11 @@ class SnapshotResult(BaseModel):
     overallScore: float
     mentions: list[MentionResult]
     engineScores: dict[str, float]
-
-
-def _mock_mention(brand: str, keyword: str, engine: str) -> MentionResult:
-    """Generate a realistic mock mention for demo purposes."""
-    mentioned = random.random() > 0.35  # ~65% chance of mention
-    sentiment_choices = ["positive", "neutral", "negative"]
-    sentiment_weights = [0.55, 0.35, 0.10]
-    sentiment = random.choices(sentiment_choices, weights=sentiment_weights)[0]  # type: ignore[arg-type]
-
-    rank = random.randint(1, 5) if mentioned else None
-
-    persona = ENGINE_PERSONAS.get(engine, "")
-    if mentioned:
-        response = (
-            f"{persona}{brand} is one of the notable tools for {keyword}. "
-            f"It offers AI-powered features that help marketing teams optimize their content strategy."
-        )
-    else:
-        response = (
-            f"{persona}for {keyword}, tools like Semrush, Ahrefs, and SurferSEO are commonly recommended. "
-            f"Each has strengths depending on your specific needs."
-        )
-
-    return MentionResult(
-        engine=engine,
-        keyword=keyword,
-        prompt=f"What are the best tools for {keyword}?",
-        response=response,
-        mentioned=mentioned,
-        sentiment=sentiment,  # type: ignore[arg-type]
-        positionRank=rank,
-        confidence=round(random.uniform(0.72, 0.98), 2),
-    )
-
-
-def _engine_score(mentions: list[MentionResult], engine: str) -> float:
-    engine_mentions = [m for m in mentions if m.engine == engine]
-    if not engine_mentions:
-        return 0.0
-    mention_rate = sum(1 for m in engine_mentions if m.mentioned) / len(engine_mentions)
-    sentiment_bonus = sum(
-        0.1 if m.sentiment == "positive" else -0.05 if m.sentiment == "negative" else 0
-        for m in engine_mentions
-        if m.mentioned
-    )
-    rank_bonus = sum(
-        0.05 * (6 - m.positionRank) / 5
-        for m in engine_mentions
-        if m.mentioned and m.positionRank
-    )
-    raw = mention_rate * 100 + sentiment_bonus * 20 + rank_bonus * 20
-    return round(min(max(raw, 0), 100), 1)
+    citedSources: list[str] = []
+    shareOfVoice: float = 0.0
+    shareOfSource: float = 0.0
+    avgSentiment: float = 0.0
+    avgPosition: float = 0.0
 
 
 @router.post("/collect/geo", response_model=SnapshotResult)
@@ -116,21 +68,70 @@ async def collect_geo(
     if not request.keywords:
         raise HTTPException(status_code=422, detail="At least one keyword is required")
 
-    engines = request.engines or ["chatgpt", "gemini", "claude", "perplexity", "grok"]
+    api_keys = {
+        "OPENAI_API_KEY": settings.openai_api_key,
+        "ANTHROPIC_API_KEY": settings.anthropic_api_key,
+        "GOOGLE_AI_API_KEY": settings.google_ai_api_key,
+        "PERPLEXITY_API_KEY": settings.perplexity_api_key,
+    }
+
+    engines = request.engines or ["chatgpt", "gemini", "claude", "perplexity"]
 
     mentions: list[MentionResult] = []
-    for engine in engines:
-        for keyword in request.keywords[:5]:  # cap at 5 keywords per collection
-            mentions.append(_mock_mention(request.brandName, keyword, engine))
+    all_sources: list[str] = []
 
-    engine_scores = {engine: _engine_score(mentions, engine) for engine in engines}
-    overall = round(sum(engine_scores.values()) / len(engine_scores), 1) if engine_scores else 0.0
+    for keyword in request.keywords[:5]:
+        prompt = keyword
+        for engine in engines:
+            response_text = await query_engine(engine, prompt, api_keys)
+            analysis = analyze_mention(response_text or "", request.brandName)
+            sources = extract_cited_sources(response_text or "")
+            all_sources.extend(sources)
+            mentions.append(
+                MentionResult(
+                    engine=engine,
+                    keyword=keyword,
+                    mentioned=analysis["mentioned"],
+                    position=analysis["position"],
+                    sentiment=analysis["sentiment"],
+                    context=analysis["context"],
+                    citedSources=sources,
+                )
+            )
+
+    total_queries = len(mentions)
+    total_mentions = sum(1 for m in mentions if m.mentioned)
+    share_of_voice = round((total_mentions / total_queries) * 100, 1) if total_queries > 0 else 0.0
+
+    brand_domain = request.brandDomain or ""
+    share_of_source = calculate_share_of_source(all_sources, brand_domain)
+
+    sentiments = [m.sentiment for m in mentions if m.mentioned]
+    avg_sentiment = round(sum(sentiments) / len(sentiments) * 100, 1) if sentiments else 0.0
+
+    positions = [m.position for m in mentions if m.mentioned and m.position > 0]
+    avg_position = round(sum(positions) / len(positions), 2) if positions else 0.0
+
+    engine_scores: dict[str, float] = {}
+    for engine in engines:
+        eng_mentions = [m for m in mentions if m.engine == engine]
+        if eng_mentions:
+            engine_scores[engine] = round(
+                sum(1 for m in eng_mentions if m.mentioned) / len(eng_mentions) * 100, 1
+            )
+        else:
+            engine_scores[engine] = 0.0
 
     return SnapshotResult(
         monitorId=request.monitorId,
         tenantId=request.tenantId,
         collectedAt=datetime.utcnow().isoformat() + "Z",
-        overallScore=overall,
-        mentions=mentions,
+        overallScore=share_of_voice,
         engineScores=engine_scores,
+        mentions=mentions,
+        citedSources=list(set(all_sources)),
+        shareOfVoice=share_of_voice,
+        shareOfSource=share_of_source,
+        avgSentiment=avg_sentiment,
+        avgPosition=avg_position,
     )
