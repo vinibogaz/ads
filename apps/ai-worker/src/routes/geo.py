@@ -1,9 +1,11 @@
 """
-GEO (Generative Engine Optimization) collection route — real LLM engine.
+GEO (Generative Engine Optimization) collection + diagnostic routes.
 """
+import hashlib
 from datetime import datetime
 from typing import Literal, Optional
 
+import httpx
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 
@@ -14,6 +16,7 @@ from ..services.geo_engine import (
     extract_cited_sources,
     query_engine,
 )
+from ..services.site_diagnostic import diagnose_site
 
 router = APIRouter(tags=["geo"])
 
@@ -135,3 +138,161 @@ async def collect_geo(
         avgSentiment=avg_sentiment,
         avgPosition=avg_position,
     )
+
+
+# ---------------------------------------------------------------------------
+# Diagnostic routes
+# ---------------------------------------------------------------------------
+
+
+class DiagnoseRequest(BaseModel):
+    url: str
+    tenantId: str
+    monitorId: str
+
+
+class FindingResult(BaseModel):
+    category: str
+    status: str  # "pass" | "warn" | "fail"
+    message: str
+    action: str
+
+
+class DiagnosticResult(BaseModel):
+    geoReadinessScore: int
+    findings: list[FindingResult]
+
+
+@router.post("/diagnose/site", response_model=DiagnosticResult)
+async def diagnose_site_route(
+    request: DiagnoseRequest,
+    x_worker_secret: str = Header(...),
+) -> DiagnosticResult:
+    if x_worker_secret != settings.worker_secret:
+        raise HTTPException(status_code=401, detail="Invalid worker secret")
+    raw = await diagnose_site(request.url)
+    return DiagnosticResult(
+        geoReadinessScore=int(raw.get("geoReadinessScore", 0)),
+        findings=[FindingResult(**f) for f in raw.get("findings", [])],
+    )
+
+
+# ---------------------------------------------------------------------------
+# Action plan routes
+# ---------------------------------------------------------------------------
+
+_action_plan_cache: dict[str, tuple[dict, datetime]] = {}
+_ACTION_PLAN_TTL = 24 * 3600  # seconds
+
+
+class ActionPlanRequest(BaseModel):
+    tenantId: str
+    monitorId: str
+    brandName: str
+    promptContext: str
+    diagnosticFindings: list[dict] = []
+
+
+class ActionItem(BaseModel):
+    title: str
+    description: str
+    priority: str  # "high" | "medium" | "low"
+    effort: str    # "low" | "medium" | "high"
+    category: str
+
+
+class ActionPlanResult(BaseModel):
+    planId: str
+    generatedAt: str
+    actions: list[ActionItem]
+
+
+@router.post("/action-plan/generate", response_model=ActionPlanResult)
+async def generate_action_plan(
+    request: ActionPlanRequest,
+    x_worker_secret: str = Header(...),
+) -> ActionPlanResult:
+    if x_worker_secret != settings.worker_secret:
+        raise HTTPException(status_code=401, detail="Invalid worker secret")
+
+    cache_key = hashlib.md5(
+        f"{request.tenantId}:{request.monitorId}:{request.promptContext}".encode()
+    ).hexdigest()
+
+    if cache_key in _action_plan_cache:
+        cached, cached_at = _action_plan_cache[cache_key]
+        if (datetime.utcnow() - cached_at).total_seconds() < _ACTION_PLAN_TTL:
+            return ActionPlanResult(**cached)
+
+    if not settings.openai_api_key:
+        raise HTTPException(status_code=503, detail="OpenAI API key not configured")
+
+    findings_summary = ""
+    if request.diagnosticFindings:
+        fails = [f for f in request.diagnosticFindings if f.get("status") == "fail"]
+        warns = [f for f in request.diagnosticFindings if f.get("status") == "warn"]
+        findings_summary = (
+            f"\nDiagnóstico GEO atual:\n"
+            f"- Falhas críticas: {[f['category'] for f in fails]}\n"
+            f"- Avisos: {[f['category'] for f in warns]}"
+        )
+
+    system_prompt = (
+        "Você é um especialista em GEO (Generative Engine Optimization). "
+        "Gere exatamente 5 ações concretas e priorizadas para melhorar a presença da marca "
+        "em IAs generativas (ChatGPT, Claude, Gemini, Perplexity). "
+        "Responda APENAS com JSON válido, sem texto adicional, no formato:\n"
+        '{"actions": [{"title": "...", "description": "...", "priority": "high|medium|low", '
+        '"effort": "low|medium|high", "category": "..."}, ...]}'
+    )
+    user_prompt = (
+        f"Marca: {request.brandName}\n"
+        f"Contexto: {request.promptContext}"
+        f"{findings_summary}\n\n"
+        "Gere 5 ações de GEO priorizadas."
+    )
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={"Authorization": f"Bearer {settings.openai_api_key}"},
+            json={
+                "model": "gpt-4o-mini",
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                "temperature": 0.7,
+                "max_tokens": 1200,
+            },
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+    raw_content = data["choices"][0]["message"]["content"]
+    try:
+        import json as _json
+        parsed = _json.loads(raw_content)
+        actions_raw = parsed.get("actions", [])
+    except Exception:
+        raise HTTPException(status_code=502, detail="LLM returned invalid JSON")
+
+    actions = [
+        ActionItem(
+            title=a.get("title", ""),
+            description=a.get("description", ""),
+            priority=a.get("priority", "medium"),
+            effort=a.get("effort", "medium"),
+            category=a.get("category", "Geral"),
+        )
+        for a in actions_raw[:5]
+    ]
+
+    import uuid
+    result = ActionPlanResult(
+        planId=str(uuid.uuid4()),
+        generatedAt=datetime.utcnow().isoformat() + "Z",
+        actions=actions,
+    )
+    _action_plan_cache[cache_key] = (result.model_dump(), datetime.utcnow())
+    return result
