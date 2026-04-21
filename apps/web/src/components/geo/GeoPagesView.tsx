@@ -20,7 +20,7 @@ export function GeoPagesView() {
 
   const load = () => {
     setLoading(true)
-    apiRequest<GeoPage[]>('/api/v1/geo/pages')
+    apiRequest<GeoPage[]>('/geo/pages')
       .then(r => setPages(r.data ?? []))
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -33,7 +33,7 @@ export function GeoPagesView() {
     setSaving(true)
     setError('')
     try {
-      await apiRequest('/api/v1/geo/pages', {
+      await apiRequest('/geo/pages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pageUrl: url.trim() }),
@@ -50,7 +50,7 @@ export function GeoPagesView() {
 
   const removePage = async (id: string) => {
     setPages(p => p.filter(x => x.id !== id))
-    await apiRequest(`/api/v1/geo/pages/${id}`, { method: 'DELETE' }).catch(() => {
+    await apiRequest(`/geo/pages/${id}`, { method: 'DELETE' }).catch(() => {
       load()
     })
   }
