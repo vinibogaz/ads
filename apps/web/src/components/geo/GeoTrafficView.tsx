@@ -76,7 +76,7 @@ export function GeoTrafficView() {
     setLoading(true)
     const params = new URLSearchParams({ days })
     if (filterSource) params.set('source', filterSource)
-    apiRequest<TrafficData>(`/api/v1/geo/traffic?${params.toString()}`)
+    apiRequest<TrafficData>(`/geo/traffic?${params.toString()}`)
       .then(r => setData(r.data))
       .catch(() => {})
       .finally(() => setLoading(false))
