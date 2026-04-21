@@ -9,21 +9,21 @@ COPY packages/ui/package.json ./packages/ui/
 
 # ---- Dependencies ----
 FROM base AS deps
-RUN npm ci --workspace=@synthex/web --workspace=@synthex/shared --workspace=@synthex/ui
+RUN npm ci --workspace=@orffia/web --workspace=@orffia/shared --workspace=@orffia/ui
 
 # ---- Development ----
 FROM deps AS dev
 COPY . .
 EXPOSE 3000
-CMD ["npm", "run", "dev", "--workspace=@synthex/web"]
+CMD ["npm", "run", "dev", "--workspace=@orffia/web"]
 
 # ---- Builder ----
 FROM deps AS builder
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN npm run build --workspace=@synthex/shared
-RUN npm run build --workspace=@synthex/ui
-RUN npm run build --workspace=@synthex/web
+RUN npm run build --workspace=@orffia/shared
+RUN npm run build --workspace=@orffia/ui
+RUN npm run build --workspace=@orffia/web
 
 # ---- Production ----
 FROM node:20-alpine AS production
