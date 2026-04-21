@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { apiRequest } from '@/lib/api'
 
 interface Integration {
   id: string
@@ -31,14 +32,14 @@ const integrations: Integration[] = [
   },
   {
     id: 'ghost',
-    name: 'Ghost',
+    name: 'Ghost CMS',
     description: 'Publique conteúdo diretamente no seu site Ghost via Content API',
     tooltip: 'Necessário: URL do Ghost + Staff API Key. Encontre em: Settings → Integrations → Add custom integration.',
     category: 'CMS',
     status: 'available',
     color: '#15171A',
     icon: (
-      <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current" style={{ color: '#15171A' }}>
+      <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current">
         <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 4.57c2.974 0 5.51 1.638 6.89 4.067H5.11C6.49 6.208 9.026 4.57 12 4.57zm0 14.86A7.432 7.432 0 016.048 16.5h11.904A7.432 7.432 0 0112 19.43zm8.447-5.357H3.553a8.452 8.452 0 010-4.147h16.894a8.452 8.452 0 010 4.147z"/>
       </svg>
     ),
@@ -71,6 +72,62 @@ const integrations: Integration[] = [
       </svg>
     ),
   },
+  {
+    id: 'contentful',
+    name: 'Contentful',
+    description: 'Publique e atualize entradas no seu space Contentful via Content Management API',
+    tooltip: 'Necessário: Space ID + Content Management API Token. Acesse: Settings → API Keys → Content Management Tokens.',
+    category: 'CMS',
+    status: 'available',
+    color: '#2478CC',
+    icon: (
+      <svg viewBox="0 0 24 24" className="w-6 h-6" fill="#2478CC">
+        <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1.5 14.5a5.5 5.5 0 110-11 5.5 5.5 0 010 11zm0-3a2.5 2.5 0 100-5 2.5 2.5 0 000 5zm6-7a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'sanity',
+    name: 'Sanity',
+    description: 'Crie e publique documentos no seu dataset Sanity via GROQ API',
+    tooltip: 'Necessário: Project ID + Dataset + API Token (Editor ou superior). Acesse: sanity.io/manage → API → Tokens.',
+    category: 'CMS',
+    status: 'available',
+    color: '#F03E2F',
+    icon: (
+      <svg viewBox="0 0 24 24" className="w-6 h-6" fill="#F03E2F">
+        <path d="M5.5 6A3.5 3.5 0 019 2.5h6A3.5 3.5 0 0118.5 6v.5H20v3h-1.5V18A3.5 3.5 0 0115 21.5H9A3.5 3.5 0 015.5 18V9.5H4v-3h1.5V6zm3 0v.5h7V6A1.5 1.5 0 0015 4.5H9A1.5 1.5 0 007.5 6z"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'hubspot',
+    name: 'HubSpot CMS',
+    description: 'Crie e publique posts no blog HubSpot CMS via API',
+    tooltip: 'Necessário: Private App Token com escopos content e cms. Acesse: Settings → Integrations → Private Apps → Create.',
+    category: 'CMS',
+    status: 'available',
+    color: '#FF7A59',
+    icon: (
+      <svg viewBox="0 0 24 24" className="w-6 h-6" fill="#FF7A59">
+        <path d="M18.164 7.93V5.084a2.198 2.198 0 10-2.196 0V7.93a6.242 6.242 0 00-2.99 1.616L5.764 4.9a2.438 2.438 0 10-.899 1.394l7.006 4.55a6.223 6.223 0 00-.845 3.122 6.26 6.26 0 001.328 3.845l-2.14 2.14a1.72 1.72 0 101.06 1.06l2.14-2.14A6.254 6.254 0 1018.164 7.93zm-5.1 8.585a3.56 3.56 0 110-7.121 3.56 3.56 0 010 7.121z"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'strapi',
+    name: 'Strapi',
+    description: 'Publique conteúdo no seu CMS Strapi self-hosted ou Cloud via REST API',
+    tooltip: 'Necessário: URL do Strapi + API Token com permissão de criação. Acesse: Settings → API Tokens → Create new API Token.',
+    category: 'CMS',
+    status: 'available',
+    color: '#4945FF',
+    icon: (
+      <svg viewBox="0 0 24 24" className="w-6 h-6" fill="#4945FF">
+        <path d="M3 3h9v9H3zm9 9h9v9H12zM12 3h9v9h-4.5V7.5H12z"/>
+      </svg>
+    ),
+  },
   // SEO
   {
     id: 'gsc',
@@ -81,7 +138,7 @@ const integrations: Integration[] = [
     status: 'available',
     color: '#4285F4',
     icon: (
-      <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current">
+      <svg viewBox="0 0 24 24" className="w-6 h-6">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
         <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
         <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
@@ -135,10 +192,10 @@ const integrations: Integration[] = [
   {
     id: 'ga4',
     name: 'Google Analytics 4',
-    description: 'Conecte métricas de tráfego e conversão ao seu dashboard',
-    tooltip: 'Necessário: autorização OAuth com Google Analytics 4. Property ID e permissão de leitura necessários.',
+    description: 'Conecte métricas de tráfego e conversão ao seu dashboard GEO',
+    tooltip: 'Necessário: Property ID + Measurement ID + API Secret. Acesse: GA4 → Admin → Data Streams → seu stream → Measurement Protocol API secrets.',
     category: 'Analytics',
-    status: 'coming_soon',
+    status: 'available',
     color: '#E37400',
     icon: (
       <svg viewBox="0 0 24 24" className="w-6 h-6" fill="#E37400">
@@ -201,7 +258,49 @@ const integrations: Integration[] = [
     color: '#95BF47',
     icon: (
       <svg viewBox="0 0 24 24" className="w-6 h-6 fill-[#95BF47]">
-        <path d="M15.337.009c-.047-.003-.093-.006-.14-.006C14.155.003 13.12.635 12.5 1.639c-.099.16-.194.34-.284.532-.74.178-1.48.553-2.226 1.124-.13-.54-.347-1.044-.664-1.44C8.861 1.188 8.11.808 7.208.808c-.063 0-.126.003-.19.008C5.782 1.059 4.6 2.56 3.993 4.602c-.027.09-.05.18-.072.271L2 5.503v.023l2.122 9.714L22 12.67V11.65L15.337.009zM10.5 3.562c.637-.465 1.281-.77 1.93-.882a7.74 7.74 0 00-.12.45C11.89 4.31 11.5 6.015 11.5 7.886v.083c-.83.219-1.623.569-2.375 1.044L10.5 3.562zM9.16 1.638c.386 0 .685.167.916.497.318.454.512 1.123.56 1.961L7.37 5.317c.5-2.071 1.342-3.35 1.79-3.679zm5.6 7.52c-2.22 1.45-5.116 1.578-7.77.367L5.386 5.737l2.118-.62c.002-.07.004-.14.007-.21L9.79 4.27l5.46-1.6.152.272 1.034 6.07-1.677.125z"/>
+        <path d="M15.337.009c-.047-.003-.093-.006-.14-.006C14.155.003 13.12.635 12.5 1.639c-.099.16-.194.34-.284.532-.74.178-1.48.553-2.226 1.124-.13-.54-.347-1.044-.664-1.44C8.861 1.188 8.11.808 7.208.808c-.063 0-.126.003-.19.008C5.782 1.059 4.6 2.56 3.993 4.602c-.027.09-.05.18-.072.271L2 5.503v.023l2.122 9.714L22 12.67V11.65L15.337.009z"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'vtex',
+    name: 'VTEX',
+    description: 'Otimize descrições de produtos e conteúdo da sua loja VTEX para IAs',
+    tooltip: 'Necessário: Account Name + App Key + App Token. Acesse: Account Settings → Account → App Keys.',
+    category: 'E-commerce',
+    status: 'available',
+    color: '#F71963',
+    icon: (
+      <svg viewBox="0 0 24 24" className="w-6 h-6" fill="#F71963">
+        <path d="M2 5l4.5 14L12 8.5 17.5 19 22 5H2z"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'nuvemshop',
+    name: 'Nuvemshop',
+    description: 'Publique e otimize conteúdo na sua loja Nuvemshop para buscas em IAs',
+    tooltip: 'Necessário: User ID + Access Token. Acesse: Aplicativos → Criar app → Instalar → copie o User ID e Access Token.',
+    category: 'E-commerce',
+    status: 'available',
+    color: '#1C79C0',
+    icon: (
+      <svg viewBox="0 0 24 24" className="w-6 h-6" fill="#1C79C0">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'tray',
+    name: 'Tray Commerce',
+    description: 'Gerencie descrições e SEO de produtos na sua loja Tray via API',
+    tooltip: 'Necessário: URL da loja + Consumer Key + Consumer Secret. Acesse: Painel Tray → Configurações → API → Gerar credenciais.',
+    category: 'E-commerce',
+    status: 'available',
+    color: '#E8430D',
+    icon: (
+      <svg viewBox="0 0 24 24" className="w-6 h-6" fill="#E8430D">
+        <path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.5L20 8.5v7L12 19.5 4 15.5v-7l8-4z"/>
       </svg>
     ),
   },
@@ -216,11 +315,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   'E-commerce': 'text-green-400 bg-green-400/10',
 }
 
-// Integrations that use a webhook URL for connection
 const WEBHOOK_INTEGRATIONS = new Set(['zapier', 'n8n'])
-
-// Integrations that use API key / token configuration
-const API_CONFIG_INTEGRATIONS = new Set(['webflow', 'wix', 'shopify', 'gsc', 'semrush', 'ahrefs', 'bing', 'wordpress', 'ghost', 'linkedin'])
 
 type ConfigField = { key: string; label: string; placeholder: string; type?: string }
 
@@ -253,8 +348,8 @@ const API_CONFIG_FIELDS: Record<string, ConfigField[]> = {
   ],
   wordpress: [
     { key: 'siteUrl', label: 'URL do site', placeholder: 'https://meusite.com.br' },
-    { key: 'appPassword', label: 'Application Password', placeholder: 'xxxx xxxx xxxx xxxx xxxx xxxx' },
     { key: 'username', label: 'Usuário', placeholder: 'seu-usuario-wp' },
+    { key: 'appPassword', label: 'Application Password', placeholder: 'xxxx xxxx xxxx xxxx xxxx xxxx' },
   ],
   ghost: [
     { key: 'siteUrl', label: 'URL do Ghost', placeholder: 'https://meusite.ghost.io' },
@@ -263,30 +358,69 @@ const API_CONFIG_FIELDS: Record<string, ConfigField[]> = {
   linkedin: [
     { key: 'accessToken', label: 'Access Token', placeholder: 'Token OAuth do LinkedIn' },
   ],
+  contentful: [
+    { key: 'spaceId', label: 'Space ID', placeholder: 'ID do Space Contentful' },
+    { key: 'environment', label: 'Environment', placeholder: 'master' },
+    { key: 'accessToken', label: 'Content Management Token', placeholder: 'Token com permissão de escrita' },
+  ],
+  sanity: [
+    { key: 'projectId', label: 'Project ID', placeholder: 'ID do projeto Sanity' },
+    { key: 'dataset', label: 'Dataset', placeholder: 'production' },
+    { key: 'apiToken', label: 'API Token', placeholder: 'Token Editor ou superior' },
+  ],
+  hubspot: [
+    { key: 'privateAppToken', label: 'Private App Token', placeholder: 'pat-na1-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx' },
+  ],
+  strapi: [
+    { key: 'baseUrl', label: 'URL do Strapi', placeholder: 'https://meu-strapi.com' },
+    { key: 'apiToken', label: 'API Token', placeholder: 'Token com permissão de criação' },
+  ],
+  vtex: [
+    { key: 'accountName', label: 'Account Name', placeholder: 'minhaloja' },
+    { key: 'appKey', label: 'App Key', placeholder: 'vtexappkey-minhaloja-XXXXXX' },
+    { key: 'appToken', label: 'App Token', placeholder: 'Token de acesso VTEX', type: 'password' },
+  ],
+  nuvemshop: [
+    { key: 'userId', label: 'User ID', placeholder: 'ID numérico da loja' },
+    { key: 'accessToken', label: 'Access Token', placeholder: 'Token de acesso Nuvemshop' },
+  ],
+  tray: [
+    { key: 'storeUrl', label: 'URL da loja', placeholder: 'minhaloja.commercesuite.com.br' },
+    { key: 'consumerKey', label: 'Consumer Key', placeholder: 'Consumer Key da API' },
+    { key: 'consumerSecret', label: 'Consumer Secret', placeholder: 'Consumer Secret da API', type: 'password' },
+  ],
+  ga4: [
+    { key: 'propertyId', label: 'Property ID', placeholder: '123456789' },
+    { key: 'measurementId', label: 'Measurement ID', placeholder: 'G-XXXXXXXXXX' },
+    { key: 'apiSecret', label: 'API Secret', placeholder: 'Secret do Measurement Protocol', type: 'password' },
+  ],
 }
 
 export function IntegrationsView() {
+  const [connected, setConnected] = useState<Set<string>>(new Set())
   const [connecting, setConnecting] = useState<string | null>(null)
 
-  // Webhook-based integrations
   const [webhookConfig, setWebhookConfig] = useState<Record<string, string>>({})
   const [webhookOpen, setWebhookOpen] = useState<string | null>(null)
-  const [savedWebhooks, setSavedWebhooks] = useState<Record<string, string>>({})
 
-  // API key / token based integrations
   const [apiConfigOpen, setApiConfigOpen] = useState<string | null>(null)
   const [apiConfigValues, setApiConfigValues] = useState<Record<string, Record<string, string>>>({})
-  const [savedApiConfigs, setSavedApiConfigs] = useState<Record<string, Record<string, string>>>({})
   const [apiConfigError, setApiConfigError] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    apiRequest<Array<{ type: string }>>('/integrations')
+      .then(({ data }) => setConnected(new Set((data ?? []).map(i => i.type))))
+      .catch(() => {})
+  }, [])
 
   const handleConnect = (id: string, status: string) => {
     if (status !== 'available') return
     if (WEBHOOK_INTEGRATIONS.has(id)) {
-      setWebhookOpen(open => open === id ? null : id)
+      setWebhookOpen(o => o === id ? null : id)
       return
     }
-    if (API_CONFIG_INTEGRATIONS.has(id)) {
-      setApiConfigOpen(open => open === id ? null : id)
+    if (API_CONFIG_FIELDS[id]) {
+      setApiConfigOpen(o => o === id ? null : id)
       setApiConfigError(e => ({ ...e, [id]: '' }))
       return
     }
@@ -294,14 +428,22 @@ export function IntegrationsView() {
     setTimeout(() => setConnecting(null), 2000)
   }
 
-  const handleSaveWebhook = (id: string) => {
+  const handleSaveWebhook = async (id: string) => {
     const url = webhookConfig[id]?.trim()
     if (!url) return
-    setSavedWebhooks(s => ({ ...s, [id]: url }))
-    setWebhookOpen(null)
+    try {
+      await apiRequest(`/integrations/${id}/connect`, {
+        method: 'POST',
+        body: JSON.stringify({ webhookUrl: url }),
+      })
+      setConnected(s => new Set([...s, id]))
+      setWebhookOpen(null)
+    } catch {
+      // silently fail — user can retry
+    }
   }
 
-  const handleSaveApiConfig = (id: string) => {
+  const handleSaveApiConfig = async (id: string) => {
     const values = apiConfigValues[id] ?? {}
     const fields = API_CONFIG_FIELDS[id] ?? []
     const missing = fields.find(f => !values[f.key]?.trim())
@@ -309,17 +451,24 @@ export function IntegrationsView() {
       setApiConfigError(e => ({ ...e, [id]: `Preencha o campo: ${missing.label}` }))
       return
     }
-    setSavedApiConfigs(s => ({ ...s, [id]: values }))
-    setApiConfigOpen(null)
-    setApiConfigError(e => ({ ...e, [id]: '' }))
+    try {
+      await apiRequest(`/integrations/${id}/connect`, {
+        method: 'POST',
+        body: JSON.stringify(values),
+      })
+      setConnected(s => new Set([...s, id]))
+      setApiConfigOpen(null)
+      setApiConfigError(e => ({ ...e, [id]: '' }))
+    } catch {
+      setApiConfigError(e => ({ ...e, [id]: 'Erro ao salvar. Verifique as credenciais e tente novamente.' }))
+    }
   }
 
-  const handleDisconnect = (id: string) => {
-    if (WEBHOOK_INTEGRATIONS.has(id)) {
-      setSavedWebhooks(s => { const n = { ...s }; delete n[id]; return n })
-    } else {
-      setSavedApiConfigs(s => { const n = { ...s }; delete n[id]; return n })
-    }
+  const handleDisconnect = async (id: string) => {
+    await apiRequest(`/integrations/${id}`, { method: 'DELETE' }).catch(() => {})
+    setConnected(s => { const n = new Set(s); n.delete(id); return n })
+    setWebhookOpen(null)
+    setApiConfigOpen(null)
   }
 
   const categories = [...new Set(integrations.map(i => i.category))]
@@ -335,16 +484,12 @@ export function IntegrationsView() {
       <div className="flex items-center gap-6 p-4 rounded-orf-xl bg-orf-surface border border-orf-border">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-orf-success animate-pulse" />
-          <span className="text-sm text-orf-text">
-            {Object.keys(savedWebhooks).length + Object.keys(savedApiConfigs).length} conectadas
-          </span>
+          <span className="text-sm text-orf-text">{connected.size} conectadas</span>
         </div>
         <div className="w-px h-4 bg-orf-border" />
         <span className="text-sm text-orf-text-2">
           {integrations.filter(i => i.status === 'available').length} disponíveis
         </span>
-        <div className="flex-1" />
-        <span className="text-xs text-orf-text-3">Mais integrações em breve →</span>
       </div>
 
       {categories.map(cat => (
@@ -356,9 +501,7 @@ export function IntegrationsView() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {integrations.filter(i => i.category === cat).map(integration => {
-              const isSavedWebhook = !!savedWebhooks[integration.id]
-              const isSavedApi = !!savedApiConfigs[integration.id]
-              const isSaved = isSavedWebhook || isSavedApi
+              const isSaved = connected.has(integration.id)
               const isWebhookOpen = webhookOpen === integration.id
               const isApiConfigOpen = apiConfigOpen === integration.id
               const configFields = API_CONFIG_FIELDS[integration.id] ?? []
@@ -382,9 +525,7 @@ export function IntegrationsView() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-medium text-orf-text text-sm">{integration.name}</h3>
-                        {isSaved && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-orf-success" />
-                        )}
+                        {isSaved && <span className="w-1.5 h-1.5 rounded-full bg-orf-success" />}
                         <div className="relative ml-auto group/tip shrink-0">
                           <button
                             className="w-4 h-4 rounded-full bg-orf-surface-2 border border-orf-border text-orf-text-3 text-[10px] font-bold flex items-center justify-center hover:border-orf-primary/60 hover:text-orf-primary transition-colors"
@@ -410,18 +551,8 @@ export function IntegrationsView() {
                         onChange={e => setWebhookConfig(c => ({ ...c, [integration.id]: e.target.value }))}
                       />
                       <div className="flex gap-2">
-                        <button
-                          onClick={() => handleSaveWebhook(integration.id)}
-                          className="orf-btn-primary text-xs py-1.5 px-3 flex-1"
-                        >
-                          Salvar
-                        </button>
-                        <button
-                          onClick={() => setWebhookOpen(null)}
-                          className="orf-btn-ghost text-xs py-1.5 px-3"
-                        >
-                          Cancelar
-                        </button>
+                        <button onClick={() => handleSaveWebhook(integration.id)} className="orf-btn-primary text-xs py-1.5 px-3 flex-1">Salvar</button>
+                        <button onClick={() => setWebhookOpen(null)} className="orf-btn-ghost text-xs py-1.5 px-3">Cancelar</button>
                       </div>
                     </div>
                   )}
@@ -448,18 +579,8 @@ export function IntegrationsView() {
                         <p className="text-xs text-orf-error">{apiConfigError[integration.id]}</p>
                       )}
                       <div className="flex gap-2">
-                        <button
-                          onClick={() => handleSaveApiConfig(integration.id)}
-                          className="orf-btn-primary text-xs py-1.5 px-3 flex-1"
-                        >
-                          Salvar
-                        </button>
-                        <button
-                          onClick={() => setApiConfigOpen(null)}
-                          className="orf-btn-ghost text-xs py-1.5 px-3"
-                        >
-                          Cancelar
-                        </button>
+                        <button onClick={() => handleSaveApiConfig(integration.id)} className="orf-btn-primary text-xs py-1.5 px-3 flex-1">Salvar</button>
+                        <button onClick={() => setApiConfigOpen(null)} className="orf-btn-ghost text-xs py-1.5 px-3">Cancelar</button>
                       </div>
                     </div>
                   )}
@@ -468,10 +589,7 @@ export function IntegrationsView() {
                     {isSaved ? (
                       <div className="flex items-center gap-2">
                         <span className="orf-badge orf-badge-success">Conectado</span>
-                        <button
-                          onClick={() => handleDisconnect(integration.id)}
-                          className="text-xs text-orf-text-3 hover:text-orf-error transition-colors"
-                        >
+                        <button onClick={() => handleDisconnect(integration.id)} className="text-xs text-orf-text-3 hover:text-orf-error transition-colors">
                           Desconectar
                         </button>
                       </div>
@@ -483,11 +601,7 @@ export function IntegrationsView() {
                         disabled={connecting === integration.id}
                         className="orf-btn-secondary text-xs py-1.5 px-3 group-hover:border-orf-primary/60 group-hover:text-orf-primary transition-colors"
                       >
-                        {connecting === integration.id
-                          ? 'Conectando...'
-                          : (isWebhookOpen || isApiConfigOpen)
-                          ? 'Configurando...'
-                          : 'Conectar'}
+                        {connecting === integration.id ? 'Conectando...' : (isWebhookOpen || isApiConfigOpen) ? 'Configurando...' : 'Conectar'}
                       </button>
                     )}
                   </div>
