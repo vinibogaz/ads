@@ -855,4 +855,168 @@ export async function geoRoutes(app: FastifyInstance) {
       return reply.send({ data: { rows, totals, days } })
     }
   )
+
+  // ─── Sprint 8 routes ────────────────────────────────────────────────────────
+
+  // POST /api/v1/geo/diagnostic  (frontend-compatible: accepts {url} → AI worker → findings)
+  app.post(
+    '/diagnostic',
+    { schema: { tags: ['geo'], summary: 'Run GEO site diagnostic via AI worker' } },
+    async (request, reply) => {
+      const body = z.object({
+        url: z.string().url().max(2000),
+        monitorId: z.string().uuid().optional().or(z.literal('')).transform(v => v || undefined),
+      }).parse(request.body)
+
+      type WorkerFinding = { category: string; status: 'pass' | 'warn' | 'fail'; message: string; action: string }
+      type WorkerResult = { geoReadinessScore: number; findings: WorkerFinding[] }
+
+      let result: WorkerResult
+
+      try {
+        const workerRes = await fetch(`${env.AI_WORKER_URL}/api/diagnose/site`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Worker-Secret': env.AI_WORKER_SECRET,
+          },
+          body: JSON.stringify({ targetUrl: body.url, monitorId: body.monitorId ?? '' }),
+          signal: AbortSignal.timeout(30000),
+        })
+
+        if (!workerRes.ok) throw new Error(`Worker ${workerRes.status}`)
+        result = await workerRes.json() as WorkerResult
+      } catch {
+        const isHttps = body.url.startsWith('https://')
+        result = {
+          geoReadinessScore: isHttps ? 45 : 35,
+          findings: [
+            {
+              category: 'HTTPS',
+              status: isHttps ? 'pass' : 'fail',
+              message: isHttps ? 'Site servido via HTTPS' : 'Site não usa HTTPS',
+              action: isHttps ? 'Nenhuma ação necessária' : 'Configure HTTPS com Let\'s Encrypt',
+            },
+            {
+              category: 'Dados Estruturados',
+              status: 'warn',
+              message: 'Verificação manual necessária para JSON-LD/Schema.org',
+              action: 'Adicione structured data (FAQ, Article, Organization) às páginas principais',
+            },
+            {
+              category: 'Profundidade de Conteúdo',
+              status: 'warn',
+              message: 'Análise automática indisponível — worker offline',
+              action: 'Garanta cobertura abrangente dos tópicos (1500+ palavras por página)',
+            },
+          ],
+        }
+      }
+
+      await db.insert(geoSiteDiagnostics).values({
+        tenantId: request.user.tid,
+        monitorId: body.monitorId,
+        targetUrl: body.url,
+        geoReadinessScore: result.geoReadinessScore,
+        findings: result.findings,
+      })
+
+      return reply.send({ data: result })
+    }
+  )
+
+  // GET /api/v1/geo/diagnostic/history
+  app.get(
+    '/diagnostic/history',
+    { schema: { tags: ['geo'], summary: 'Get diagnostic history for tenant' } },
+    async (request, reply) => {
+      const query = request.query as { limit?: string }
+      const limit = Math.min(parseInt(query.limit ?? '20', 10), 50)
+
+      const history = await db.query.geoSiteDiagnostics.findMany({
+        where: eq(geoSiteDiagnostics.tenantId, request.user.tid),
+        orderBy: [desc(geoSiteDiagnostics.analyzedAt)],
+        limit,
+      })
+
+      return reply.send({ data: history })
+    }
+  )
+
+  // GET /api/v1/geo/alerts
+  app.get(
+    '/alerts',
+    { schema: { tags: ['geo'], summary: 'List GEO alerts' } },
+    async (request, reply) => {
+      const alerts = await db.query.geoAlerts.findMany({
+        where: eq(geoAlerts.tenantId, request.user.tid),
+        orderBy: [desc(geoAlerts.createdAt)],
+      })
+      return reply.send({ data: alerts })
+    }
+  )
+
+  // POST /api/v1/geo/alerts
+  app.post(
+    '/alerts',
+    { schema: { tags: ['geo'], summary: 'Create GEO alert' } },
+    async (request, reply) => {
+      const body = z.object({
+        monitorId: z.string().uuid(),
+        type: z.enum(['score_drop', 'mention_lost', 'competitor_surpassed', 'new_citation']),
+        threshold: z.number().min(0).max(100).optional(),
+      }).parse(request.body)
+
+      const [alert] = await db
+        .insert(geoAlerts)
+        .values({
+          tenantId: request.user.tid,
+          monitorId: body.monitorId,
+          type: body.type,
+          threshold: body.threshold?.toString(),
+          isActive: true,
+        })
+        .returning()
+
+      return reply.status(201).send({ data: alert })
+    }
+  )
+
+  // DELETE /api/v1/geo/alerts/:id
+  app.delete(
+    '/alerts/:id',
+    { schema: { tags: ['geo'], summary: 'Delete GEO alert' } },
+    async (request, reply) => {
+      const { id } = request.params as { id: string }
+      await db
+        .delete(geoAlerts)
+        .where(and(eq(geoAlerts.id, id), eq(geoAlerts.tenantId, request.user.tid)))
+      return reply.status(204).send()
+    }
+  )
+
+  // PATCH /api/v1/geo/alerts/:id/toggle
+  app.patch(
+    '/alerts/:id/toggle',
+    { schema: { tags: ['geo'], summary: 'Toggle GEO alert active state' } },
+    async (request, reply) => {
+      const { id } = request.params as { id: string }
+
+      const existing = await db.query.geoAlerts.findFirst({
+        where: and(eq(geoAlerts.id, id), eq(geoAlerts.tenantId, request.user.tid)),
+      })
+
+      if (!existing) {
+        return reply.status(404).send({ error: 'NOT_FOUND', message: 'Alert not found', statusCode: 404 })
+      }
+
+      const [alert] = await db
+        .update(geoAlerts)
+        .set({ isActive: !existing.isActive })
+        .where(eq(geoAlerts.id, id))
+        .returning()
+
+      return reply.send({ data: alert })
+    }
+  )
 }
