@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Synthex Web — Next.js Frontend (Multi-stage Build)
+# ORFFIA Web — Next.js Frontend (Multi-stage Build)
 
 # ==================== STAGE 1: Dependencies ====================
 FROM node:20-alpine AS deps
