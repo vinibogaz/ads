@@ -13,6 +13,7 @@ const geoSubItems = [
   { label: 'Páginas Monit.', href: '/geo/pages' },
   { label: 'Diagnóstico GEO', href: '/geo/diagnostic' },
   { label: 'AI Traffic', href: '/geo/traffic' },
+  { label: 'Alertas', href: '/geo/alerts' },
 ]
 
 const topNavItems = [
