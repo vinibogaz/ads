@@ -22,7 +22,7 @@ export function GeoPromptsView() {
 
   const load = () => {
     setLoading(true)
-    apiRequest<GeoPrompt[]>('/api/v1/geo/prompts')
+    apiRequest<GeoPrompt[]>('/geo/prompts')
       .then(r => setPrompts(r.data ?? []))
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -34,7 +34,7 @@ export function GeoPromptsView() {
     if (!newText.trim()) return
     setSaving(true)
     try {
-      await apiRequest('/api/v1/geo/prompts', {
+      await apiRequest('/geo/prompts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -55,7 +55,7 @@ export function GeoPromptsView() {
 
   const handleDelete = async (id: string) => {
     setPrompts(p => p.filter(x => x.id !== id))
-    await apiRequest(`/api/v1/geo/prompts/${id}`, { method: 'DELETE' }).catch(() => {
+    await apiRequest(`/geo/prompts/${id}`, { method: 'DELETE' }).catch(() => {
       load()
     })
   }
