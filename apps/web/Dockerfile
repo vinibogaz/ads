@@ -50,11 +50,12 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs && \
     apk add --no-cache curl
 
-# Copy Next.js production files
-COPY --from=builder /app/apps/web/public ./public
+# outputFileTracingRoot = monorepo root, so standalone preserves apps/web/server.js path.
+# Static assets and public must match that path so server.js can locate them.
+COPY --from=builder /app/apps/web/public ./apps/web/public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./.next/static
-# Copy node_modules (standalone não inclui em monorepos)
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+# Copy node_modules (standalone nao inclui em monorepos)
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 USER nextjs
