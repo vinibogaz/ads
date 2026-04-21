@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { apiRequest } from '@/lib/api'
 
 interface Finding {
@@ -13,6 +13,13 @@ interface Finding {
 interface DiagnosticResult {
   geoReadinessScore: number
   findings: Finding[]
+}
+
+interface DiagnosticHistoryItem {
+  id: string
+  targetUrl: string
+  geoReadinessScore: number
+  analyzedAt: string
 }
 
 interface GeoDiagnosticViewProps {
@@ -116,11 +123,24 @@ function FindingCard({ finding }: { finding: Finding }) {
   )
 }
 
+function ScoreBadge({ score }: { score: number }) {
+  const color =
+    score >= 70 ? 'text-orf-success' : score >= 40 ? 'text-orf-warning' : 'text-orf-error'
+  return <span className={`font-bold tabular-nums ${color}`}>{score}</span>
+}
+
 export function GeoDiagnosticView({ monitorId, brandUrl }: GeoDiagnosticViewProps) {
   const [urlInput, setUrlInput] = useState(brandUrl ?? '')
   const [result, setResult] = useState<DiagnosticResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [history, setHistory] = useState<DiagnosticHistoryItem[]>([])
+
+  useEffect(() => {
+    apiRequest<DiagnosticHistoryItem[]>('/geo/diagnostic/history?limit=10')
+      .then(({ data }) => setHistory(data ?? []))
+      .catch(() => {})
+  }, [])
 
   async function runDiagnostic() {
     if (!urlInput.trim()) return
@@ -135,6 +155,16 @@ export function GeoDiagnosticView({ monitorId, brandUrl }: GeoDiagnosticViewProp
         }),
       })
       setResult(data)
+      // Prepend to history
+      setHistory(prev => [
+        {
+          id: Date.now().toString(),
+          targetUrl: urlInput.trim(),
+          geoReadinessScore: data.geoReadinessScore,
+          analyzedAt: new Date().toISOString(),
+        },
+        ...prev.slice(0, 9),
+      ])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao executar diagnóstico')
     } finally {
@@ -238,6 +268,31 @@ export function GeoDiagnosticView({ monitorId, brandUrl }: GeoDiagnosticViewProp
           <p className="text-orf-text-3 text-xs mt-1">
             Informe a URL do site acima e clique em Rodar Diagnóstico
           </p>
+        </div>
+      )}
+
+      {/* History */}
+      {history.length > 0 && (
+        <div className="orf-card">
+          <p className="text-sm font-semibold text-orf-text mb-3">Histórico de diagnósticos</p>
+          <div className="divide-y divide-orf-border">
+            {history.map((item) => (
+              <div key={item.id} className="flex items-center justify-between py-2.5 gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <ScoreBadge score={item.geoReadinessScore} />
+                  <span className="text-xs text-orf-text-2 truncate">{item.targetUrl}</span>
+                </div>
+                <span className="text-xs text-orf-text-3 flex-shrink-0">
+                  {new Date(item.analyzedAt).toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
