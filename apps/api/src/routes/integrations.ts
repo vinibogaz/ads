@@ -5,7 +5,12 @@ import { ghostPublish, ghostTest } from '../services/integrations/ghost.js'
 import { webflowPublish, webflowTest } from '../services/integrations/webflow.js'
 import { webhookDispatch, webhookTest } from '../services/integrations/webhook.js'
 
-type Provider = 'wordpress' | 'ghost' | 'webflow' | 'n8n' | 'zapier' | 'linkedin'
+type Provider =
+  | 'wordpress' | 'ghost' | 'webflow' | 'wix' | 'contentful' | 'sanity' | 'hubspot' | 'strapi'
+  | 'n8n' | 'zapier'
+  | 'linkedin'
+  | 'shopify' | 'vtex' | 'nuvemshop' | 'tray'
+  | 'ga4' | 'gsc' | 'semrush' | 'ahrefs' | 'bing'
 
 export async function integrationsRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticate)
@@ -62,6 +67,11 @@ export async function integrationsRoutes(app: FastifyInstance) {
       // Simple AES placeholder — in production use proper encryption with KMS
       const credentialsEnc = Buffer.from(JSON.stringify(body)).toString('base64')
 
+      // Delete existing before insert so reconnecting always updates credentials
+      await db
+        .delete(cmsIntegrations)
+        .where(and(eq(cmsIntegrations.tenantId, request.user.tid), eq(cmsIntegrations.type, provider)))
+
       const [integration] = await db
         .insert(cmsIntegrations)
         .values({
@@ -73,10 +83,22 @@ export async function integrationsRoutes(app: FastifyInstance) {
           status: 'active',
           lastTestedAt: new Date(),
         })
-        .onConflictDoNothing()
         .returning()
 
       return reply.status(201).send({ data: { id: integration?.id } })
+    }
+  )
+
+  // DELETE /api/v1/integrations/:provider — disconnect integration
+  app.delete(
+    '/:provider',
+    { schema: { tags: ['integrations'], summary: 'Disconnect integration' } },
+    async (request, reply) => {
+      const { provider } = request.params as { provider: Provider }
+      await db
+        .delete(cmsIntegrations)
+        .where(and(eq(cmsIntegrations.tenantId, request.user.tid), eq(cmsIntegrations.type, provider)))
+      return reply.status(204).send()
     }
   )
 
