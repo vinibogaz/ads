@@ -880,7 +880,7 @@ export async function geoRoutes(app: FastifyInstance) {
             'Content-Type': 'application/json',
             'X-Worker-Secret': env.AI_WORKER_SECRET,
           },
-          body: JSON.stringify({ targetUrl: body.url, monitorId: body.monitorId ?? '' }),
+          body: JSON.stringify({ url: body.url, tenantId: request.user.tid, monitorId: body.monitorId ?? '' }),
           signal: AbortSignal.timeout(30000),
         })
 
