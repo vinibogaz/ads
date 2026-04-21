@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Synthex AI Worker — FastAPI Service (Multi-stage Build)
+# ORFFIA AI Worker — FastAPI Service (Multi-stage Build)
 
 # ==================== STAGE 1: Builder ====================
 FROM python:3.12-slim AS builder
