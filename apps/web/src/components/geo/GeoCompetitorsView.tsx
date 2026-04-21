@@ -26,7 +26,7 @@ export function GeoCompetitorsView() {
 
   const load = () => {
     setLoading(true)
-    apiRequest<GeoCompetitor[]>('/api/v1/geo/competitors')
+    apiRequest<GeoCompetitor[]>('/geo/competitors')
       .then(r => setCompetitors(r.data ?? []))
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -38,7 +38,7 @@ export function GeoCompetitorsView() {
     if (!name.trim()) return
     setSaving(true)
     try {
-      await apiRequest('/api/v1/geo/competitors', {
+      await apiRequest('/geo/competitors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -59,7 +59,7 @@ export function GeoCompetitorsView() {
 
   const handleDelete = async (id: string) => {
     setCompetitors(c => c.filter(x => x.id !== id))
-    await apiRequest(`/api/v1/geo/competitors/${id}`, { method: 'DELETE' }).catch(() => {
+    await apiRequest(`/geo/competitors/${id}`, { method: 'DELETE' }).catch(() => {
       load()
     })
   }
