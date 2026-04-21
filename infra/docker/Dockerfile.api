@@ -9,20 +9,20 @@ COPY packages/shared/package.json ./packages/shared/
 
 # ---- Dependencies ----
 FROM base AS deps
-RUN npm ci --workspace=@synthex/api --workspace=@synthex/db --workspace=@synthex/shared
+RUN npm ci --workspace=@orffia/api --workspace=@orffia/db --workspace=@orffia/shared
 
 # ---- Development ----
 FROM deps AS dev
 COPY . .
 EXPOSE 3001
-CMD ["npm", "run", "dev", "--workspace=@synthex/api"]
+CMD ["npm", "run", "dev", "--workspace=@orffia/api"]
 
 # ---- Builder ----
 FROM deps AS builder
 COPY . .
-RUN npm run build --workspace=@synthex/shared
-RUN npm run build --workspace=@synthex/db
-RUN npm run build --workspace=@synthex/api
+RUN npm run build --workspace=@orffia/shared
+RUN npm run build --workspace=@orffia/db
+RUN npm run build --workspace=@orffia/api
 
 # ---- Production ----
 FROM node:20-alpine AS production
@@ -33,8 +33,8 @@ ENV NODE_ENV=production
 
 COPY --from=builder /app/apps/api/dist ./dist
 COPY --from=builder /app/apps/api/package.json .
-COPY --from=builder /app/packages/db/dist ./node_modules/@synthex/db/dist
-COPY --from=builder /app/packages/shared/dist ./node_modules/@synthex/shared/dist
+COPY --from=builder /app/packages/db/dist ./node_modules/@orffia/db/dist
+COPY --from=builder /app/packages/shared/dist ./node_modules/@orffia/shared/dist
 COPY --from=builder /app/node_modules ./node_modules
 
 RUN addgroup --system --gid 1001 nodejs && \
