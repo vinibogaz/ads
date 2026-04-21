@@ -51,7 +51,8 @@ export function GeoAlertsView() {
     ]).then(([a, m]) => {
       setAlerts(a.data ?? [])
       setMonitors(m.data ?? [])
-      if (m.data?.[0]) setForm(f => ({ ...f, monitorId: m.data[0].id }))
+      const firstMonitorId = m.data?.[0]?.id
+      if (firstMonitorId) setForm(f => ({ ...f, monitorId: firstMonitorId }))
     }).finally(() => setLoading(false))
   }, [])
 
