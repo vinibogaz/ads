@@ -65,7 +65,7 @@ export function GeoDashboard() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    apiRequest<DashboardData>('/api/v1/geo/dashboard')
+    apiRequest<DashboardData>('/geo/dashboard')
       .then(r => setData(r.data))
       .catch(() => {})
       .finally(() => setLoading(false))
