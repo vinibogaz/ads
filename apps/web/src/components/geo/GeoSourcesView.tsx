@@ -24,7 +24,7 @@ export function GeoSourcesView() {
   const load = useCallback(() => {
     setLoading(true)
     const params = engineFilter ? `?engine=${engineFilter}` : ''
-    apiRequest<GeoSource[]>(`/api/v1/geo/sources${params}`)
+    apiRequest<GeoSource[]>(`/geo/sources${params}`)
       .then(r => setSources(r.data ?? []))
       .catch(() => {})
       .finally(() => setLoading(false))
