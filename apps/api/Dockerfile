@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Synthex API — Fastify Backend (Multi-stage Build)
+# ORFFIA API — Fastify Backend (Multi-stage Build)
 
 # ==================== STAGE 1: Dependencies ====================
 FROM node:20-alpine AS deps
