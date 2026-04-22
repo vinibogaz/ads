@@ -1,6 +1,5 @@
 export * from './types/auth.js'
 export * from './types/tenant.js'
 export * from './types/user.js'
-export * from './types/content.js'
-export * from './types/geo.js'
+export * from './types/ads.js'
 export * from './types/api.js'

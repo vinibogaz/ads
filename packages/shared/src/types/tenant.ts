@@ -26,50 +26,40 @@ export interface WhiteLabelSettings {
 }
 
 export interface PlanLimits {
-  articlesPerMonth: number
-  adCopiesPerMonth: number
-  emailCopiesPerMonth: number
-  geoMonitors: number
+  adsPlatformIntegrations: number
+  crmIntegrations: number
   teamMembers: number
-  cmsIntegrations: number
-  storageGb: number
+  webhooks: number
+  agentConversationsPerMonth: number
 }
 
 export const PLAN_LIMITS: Record<TenantPlan, PlanLimits> = {
   trial: {
-    articlesPerMonth: 3,
-    adCopiesPerMonth: 10,
-    emailCopiesPerMonth: 5,
-    geoMonitors: 1,
+    adsPlatformIntegrations: 1,
+    crmIntegrations: 1,
     teamMembers: 1,
-    cmsIntegrations: 1,
-    storageGb: 1,
+    webhooks: 3,
+    agentConversationsPerMonth: 0,
   },
   starter: {
-    articlesPerMonth: 30,
-    adCopiesPerMonth: 100,
-    emailCopiesPerMonth: 50,
-    geoMonitors: 3,
+    adsPlatformIntegrations: 3,
+    crmIntegrations: 2,
     teamMembers: 3,
-    cmsIntegrations: 3,
-    storageGb: 10,
+    webhooks: 10,
+    agentConversationsPerMonth: 0,
   },
   pro: {
-    articlesPerMonth: 150,
-    adCopiesPerMonth: 500,
-    emailCopiesPerMonth: 250,
-    geoMonitors: 10,
+    adsPlatformIntegrations: 10,
+    crmIntegrations: 5,
     teamMembers: 10,
-    cmsIntegrations: 10,
-    storageGb: 50,
+    webhooks: 50,
+    agentConversationsPerMonth: 500,
   },
   agency: {
-    articlesPerMonth: -1, // unlimited
-    adCopiesPerMonth: -1,
-    emailCopiesPerMonth: -1,
-    geoMonitors: -1,
+    adsPlatformIntegrations: -1,
+    crmIntegrations: -1,
     teamMembers: -1,
-    cmsIntegrations: -1,
-    storageGb: 500,
+    webhooks: -1,
+    agentConversationsPerMonth: -1,
   },
 }

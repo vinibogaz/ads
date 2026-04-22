@@ -9,11 +9,14 @@ import { swaggerPlugin } from './plugins/swagger.js'
 import { authRoutes } from './routes/auth.js'
 import { tenantRoutes } from './routes/tenants.js'
 import { userRoutes } from './routes/users.js'
-import { contentRoutes } from './routes/content.js'
-import { geoRoutes } from './routes/geo.js'
-import { integrationsRoutes } from './routes/integrations.js'
 import { privacyRoutes } from './routes/privacy.js'
 import { healthRoutes } from './routes/health.js'
+import { budgetRoutes } from './routes/budget.js'
+import { leadsRoutes } from './routes/leads.js'
+import { funnelRoutes } from './routes/funnel.js'
+import { webhooksRoutes } from './routes/webhooks.js'
+import { utmRoutes } from './routes/utm.js'
+import { adsIntegrationsRoutes } from './routes/ads-integrations.js'
 import { env } from './config/env.js'
 
 const app = Fastify({
@@ -42,15 +45,20 @@ await app.register(redisPlugin)
 await app.register(swaggerPlugin)
 await app.register(authPlugin)
 
-// Routes
+// Core routes
 await app.register(healthRoutes, { prefix: '/health' })
 await app.register(authRoutes, { prefix: '/api/v1/auth' })
 await app.register(tenantRoutes, { prefix: '/api/v1/tenants' })
 await app.register(userRoutes, { prefix: '/api/v1/users' })
-await app.register(contentRoutes, { prefix: '/api/v1/content' })
-await app.register(geoRoutes, { prefix: '/api/v1/geo' })
-await app.register(integrationsRoutes, { prefix: '/api/v1/integrations' })
 await app.register(privacyRoutes, { prefix: '/api/v1/privacy' })
+
+// Orffia Ads routes
+await app.register(budgetRoutes, { prefix: '/api/v1/budget' })
+await app.register(leadsRoutes, { prefix: '/api/v1/leads' })
+await app.register(funnelRoutes, { prefix: '/api/v1/funnel' })
+await app.register(webhooksRoutes, { prefix: '/api/v1/webhooks' })
+await app.register(utmRoutes, { prefix: '/api/v1/utm' })
+await app.register(adsIntegrationsRoutes, { prefix: '/api/v1/ads-integrations' })
 
 // Global error handler
 app.setErrorHandler((error, request, reply) => {
