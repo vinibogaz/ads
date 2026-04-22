@@ -1,5 +1,5 @@
 #!/bin/bash
-# setup-traefik.sh — Diagnóstico e configuração do Traefik para o ORFFIA
+# setup-traefik.sh — Diagnóstico e configuração do Traefik para o Orffia Ads
 # Executar no VPS: bash infra/scripts/setup-traefik.sh
 set -euo pipefail
 
@@ -7,7 +7,7 @@ VPS_IP="${VPS_IP:-31.97.245.90}"
 DOMAIN_WEB="${DOMAIN_WEB:-orffia.com}"
 DOMAIN_API="${DOMAIN_API:-api.orffia.com}"
 
-echo "=== Diagnóstico Traefik — ORFFIA ==="
+echo "=== Diagnóstico Traefik — Orffia Ads ==="
 echo "VPS IP: $VPS_IP"
 echo ""
 
@@ -75,10 +75,10 @@ else
     echo "ℹ️  Traefik já estava na rede (ou erro)"
 fi
 
-# 4. Conectar containers ORFFIA à rede do Traefik
+# 4. Conectar containers Orffia Ads à rede do Traefik
 echo ""
-echo "=== 3. Conectando containers ORFFIA ao Traefik ==="
-for container in orffia-web orffia-api; do
+echo "=== 3. Conectando containers Orffia Ads ao Traefik ==="
+for container in ads-web ads-api; do
   if docker ps --format '{{.Names}}' | grep -q "^${container}$"; then
     docker network connect root_default "$container" 2>/dev/null && \
       echo "✅ $container → root_default" || \
@@ -105,7 +105,7 @@ else
 fi
 
 echo ""
-echo "=== 5. Status dos containers ORFFIA ==="
+echo "=== 5. Status dos containers Orffia Ads ==="
 docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' | grep -E "orffia|NAMES" || echo "   Nenhum container orffia rodando"
 
 echo ""

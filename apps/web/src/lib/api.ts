@@ -1,5 +1,5 @@
 /**
- * Authenticated API client for ORFFIA backend.
+ * Authenticated API client for Orffia Ads backend.
  * Handles token refresh transparently.
  */
 

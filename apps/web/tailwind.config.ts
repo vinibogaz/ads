@@ -1,6 +1,6 @@
 import type { Config } from 'tailwindcss'
 
-// ORFFIA Design System — color tokens
+// Orffia Ads Design System — color tokens
 const config: Config = {
   content: [
     './src/**/*.{ts,tsx}',
@@ -10,7 +10,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // ORFFIA DS tokens
+        // Orffia Ads DS tokens
         'orf-bg': '#0A0F1E',
         'orf-surface': '#111827',
         'orf-surface-2': '#1a2234',

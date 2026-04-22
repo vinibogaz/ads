@@ -85,7 +85,7 @@ export function Sidebar() {
           <div className="w-7 h-7 rounded-orf-sm bg-orf-primary flex items-center justify-center">
             <span className="text-white font-bold text-xs">S</span>
           </div>
-          <span className="font-bold text-orf-text text-sm">ORFFIA</span>
+          <span className="font-bold text-orf-text text-sm">Orffia Ads</span>
         </div>
       </div>
 

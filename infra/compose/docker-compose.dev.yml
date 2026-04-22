@@ -22,7 +22,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: orffia-redis
+    container_name: ads-redis
     restart: unless-stopped
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     ports:
@@ -40,7 +40,7 @@ services:
       context: ../../
       dockerfile: infra/docker/Dockerfile.api
       target: dev
-    container_name: orffia-api
+    container_name: ads-api
     restart: unless-stopped
     environment:
       NODE_ENV: development
@@ -69,7 +69,7 @@ services:
       context: ../../apps/ai-worker
       dockerfile: ../../infra/docker/Dockerfile.ai-worker
       target: dev
-    container_name: orffia-ai-worker
+    container_name: ads-ai-worker
     restart: unless-stopped
     environment:
       PORT: 8000
@@ -92,7 +92,7 @@ services:
       context: ../../
       dockerfile: infra/docker/Dockerfile.web
       target: dev
-    container_name: orffia-web
+    container_name: ads-web
     restart: unless-stopped
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:3001

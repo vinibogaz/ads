@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { LoginForm } from '@/components/auth/LoginForm'
 
 export const metadata: Metadata = {
-  title: 'Entrar — ORFFIA',
+  title: 'Entrar — Orffia Ads',
 }
 
 export default function LoginPage() {
@@ -15,7 +15,7 @@ export default function LoginPage() {
             <div className="w-8 h-8 rounded-orf-md bg-orf-primary flex items-center justify-center">
               <span className="text-white font-bold text-sm">S</span>
             </div>
-            <span className="text-xl font-bold text-orf-text">ORFFIA</span>
+            <span className="text-xl font-bold text-orf-text">Orffia Ads</span>
           </div>
           <p className="text-orf-text-2 text-sm">Marketing Intelligence Hub</p>
         </div>

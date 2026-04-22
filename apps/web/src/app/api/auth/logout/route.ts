@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const API_URL = process.env['INTERNAL_API_URL'] ?? 'http://orffia-api:4000'
+const API_URL = process.env['INTERNAL_API_URL'] ?? 'http://ads-api:4000'
 
 export async function POST(request: NextRequest) {
   const refreshToken = request.cookies.get('orffia-refresh')?.value

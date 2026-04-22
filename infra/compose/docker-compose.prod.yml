@@ -1,6 +1,6 @@
 version: '3.9'
 
-# ORFFIA PRODUCTION — VPS Deployment
+# Orffia Ads PRODUCTION — VPS Deployment
 # Projeto isolado: docker compose -p orffia -f docker-compose.prod.yml up -d
 # Reusa PostgreSQL 15 existente no VPS (não cria container novo)
 # Portas: API 4000, Web 4001 (fallback direto)
@@ -9,7 +9,7 @@ version: '3.9'
 services:
   redis:
     image: redis:7-alpine
-    container_name: orffia-redis
+    container_name: ads-redis
     restart: always
     command: >
       redis-server
@@ -31,8 +31,8 @@ services:
     build:
       context: ../../
       dockerfile: apps/api/Dockerfile
-    image: orffia-api:latest
-    container_name: orffia-api
+    image: ads-api:latest
+    container_name: ads-api
     restart: always
     ports:
       - '4000:4000'
@@ -56,15 +56,15 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=root_default"
       # HTTP → HTTPS redirect
-      - "traefik.http.routers.orffia-api-http.rule=Host(`${DOMAIN_API:-api.orffia.com}`)"
-      - "traefik.http.routers.orffia-api-http.entrypoints=web"
-      - "traefik.http.routers.orffia-api-http.middlewares=orffia-https-redirect@docker"
+      - "traefik.http.routers.ads-api-http.rule=Host(`${DOMAIN_API:-api.orffia.com}`)"
+      - "traefik.http.routers.ads-api-http.entrypoints=web"
+      - "traefik.http.routers.ads-api-http.middlewares=orffia-https-redirect@docker"
       # HTTPS router with TLS
-      - "traefik.http.routers.orffia-api.rule=Host(`${DOMAIN_API:-api.orffia.com}`)"
-      - "traefik.http.routers.orffia-api.entrypoints=websecure"
-      - "traefik.http.routers.orffia-api.tls=true"
-      - "traefik.http.routers.orffia-api.tls.certresolver=letsencrypt"
-      - "traefik.http.services.orffia-api.loadbalancer.server.port=4000"
+      - "traefik.http.routers.ads-api.rule=Host(`${DOMAIN_API:-api.orffia.com}`)"
+      - "traefik.http.routers.ads-api.entrypoints=websecure"
+      - "traefik.http.routers.ads-api.tls=true"
+      - "traefik.http.routers.ads-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.ads-api.loadbalancer.server.port=4000"
     depends_on:
       redis:
         condition: service_healthy
@@ -88,8 +88,8 @@ services:
     build:
       context: ../../
       dockerfile: apps/ai-worker/Dockerfile
-    image: orffia-ai-worker:latest
-    container_name: orffia-ai-worker
+    image: ads-ai-worker:latest
+    container_name: ads-ai-worker
     restart: always
     environment:
       PORT: 8000
@@ -120,16 +120,16 @@ services:
     build:
       context: ../../
       dockerfile: apps/web/Dockerfile
-    image: orffia-web:latest
-    container_name: orffia-web
+    image: ads-web:latest
+    container_name: ads-web
     restart: always
     ports:
       - '4001:3000'
     environment:
       # INTERNAL_API_URL: Docker-internal URL used by server-side proxy routes
-      INTERNAL_API_URL: http://orffia-api:4000
+      INTERNAL_API_URL: http://ads-api:4000
       # NEXT_PUBLIC_API_URL: kept for backwards compat, only used server-side now
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://orffia-api:4000}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://ads-api:4000}
     networks:
       - orffia-internal
       - orffia-external
@@ -149,18 +149,18 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=root_default"
       # HTTP router → redirect to HTTPS (naked + www)
-      - "traefik.http.routers.orffia-web-http.rule=Host(`${DOMAIN_WEB:-orffia.com}`) || Host(`www.${DOMAIN_WEB:-orffia.com}`)"
-      - "traefik.http.routers.orffia-web-http.entrypoints=web"
-      - "traefik.http.routers.orffia-web-http.middlewares=orffia-https-redirect@docker"
+      - "traefik.http.routers.ads-web-http.rule=Host(`${DOMAIN_WEB:-orffia.com}`) || Host(`www.${DOMAIN_WEB:-orffia.com}`)"
+      - "traefik.http.routers.ads-web-http.entrypoints=web"
+      - "traefik.http.routers.ads-web-http.middlewares=orffia-https-redirect@docker"
       # HTTPS router — naked + www (cert covers both via SAN)
-      - "traefik.http.routers.orffia-web.rule=Host(`${DOMAIN_WEB:-orffia.com}`) || Host(`www.${DOMAIN_WEB:-orffia.com}`)"
-      - "traefik.http.routers.orffia-web.entrypoints=websecure"
-      - "traefik.http.routers.orffia-web.tls=true"
-      - "traefik.http.routers.orffia-web.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.orffia-web.tls.domains[0].main=${DOMAIN_WEB:-orffia.com}"
-      - "traefik.http.routers.orffia-web.tls.domains[0].sans=www.${DOMAIN_WEB:-orffia.com}"
-      - "traefik.http.routers.orffia-web.middlewares=orffia-www-redirect@docker"
-      - "traefik.http.services.orffia-web.loadbalancer.server.port=3000"
+      - "traefik.http.routers.ads-web.rule=Host(`${DOMAIN_WEB:-orffia.com}`) || Host(`www.${DOMAIN_WEB:-orffia.com}`)"
+      - "traefik.http.routers.ads-web.entrypoints=websecure"
+      - "traefik.http.routers.ads-web.tls=true"
+      - "traefik.http.routers.ads-web.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.ads-web.tls.domains[0].main=${DOMAIN_WEB:-orffia.com}"
+      - "traefik.http.routers.ads-web.tls.domains[0].sans=www.${DOMAIN_WEB:-orffia.com}"
+      - "traefik.http.routers.ads-web.middlewares=orffia-www-redirect@docker"
+      - "traefik.http.services.ads-web.loadbalancer.server.port=3000"
       # Middleware: HTTP → HTTPS permanent redirect
       - "traefik.http.middlewares.orffia-https-redirect.redirectscheme.scheme=https"
       - "traefik.http.middlewares.orffia-https-redirect.redirectscheme.permanent=true"

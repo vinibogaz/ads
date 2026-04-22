@@ -1,5 +1,5 @@
 {
-  "name": "@orffia/db",
+  "name": "@ads/db",
   "version": "0.1.0",
   "private": true,
   "type": "module",

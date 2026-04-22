@@ -8,11 +8,11 @@ export const swaggerPlugin = fp(async (app: FastifyInstance) => {
     openapi: {
       openapi: '3.0.0',
       info: {
-        title: 'ORFFIA API',
-        description: 'ORFFIA Marketing Intelligence Hub — REST API',
+        title: 'Orffia Ads API',
+        description: 'Orffia Ads Marketing Intelligence Hub — REST API',
         version: '1.0.0',
         contact: {
-          name: 'ORFFIA',
+          name: 'Orffia Ads',
           url: 'https://orffia.com.br',
         },
       },

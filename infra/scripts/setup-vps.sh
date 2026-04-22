@@ -3,7 +3,7 @@
 # Run as root: bash setup-vps.sh
 set -euo pipefail
 
-echo "=== ORFFIA VPS Setup ==="
+echo "=== Orffia Ads VPS Setup ==="
 
 # Update system
 apt-get update && apt-get upgrade -y

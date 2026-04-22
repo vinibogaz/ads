@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const API_URL = process.env['INTERNAL_API_URL'] ?? 'http://orffia-api:4000'
+const API_URL = process.env['INTERNAL_API_URL'] ?? 'http://ads-api:4000'
 const REFRESH_TTL = 60 * 60 * 24 * 7 // 7 days
 
 export async function POST(request: NextRequest) {

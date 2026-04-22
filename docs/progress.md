@@ -5,12 +5,12 @@
 ### ✅ O que foi completado
 
 **Monorepo Turborepo** — 88 arquivos, 5.364 linhas:
-- `@orffia/shared` — Tipos TypeScript (auth, tenant, user, content, geo, api)
-- `@orffia/db` — Drizzle ORM + schema completo + RLS multi-tenant PostgreSQL
+- `@ads/shared` — Tipos TypeScript (auth, tenant, user, content, geo, api)
+- `@ads/db` — Drizzle ORM + schema completo + RLS multi-tenant PostgreSQL
 - `apps/api` — Fastify: JWT auth (access 15min + refresh 7d + rotação), RBAC, rate-limit, swagger
-- `apps/web` — Next.js 14 App Router: dark mode, ORFFIA DS tokens, login, dashboard
+- `apps/web` — Next.js 14 App Router: dark mode, Orffia Ads DS tokens, login, dashboard
 - `apps/ai-worker` — Python FastAPI: GPT-4o + fallback Claude 3.5 Sonnet, scoring SEO/GEO
-- `@orffia/ui` — Design System: Button, Card, Badge, ScoreGauge, Spinner, Skeleton, Toast
+- `@ads/ui` — Design System: Button, Card, Badge, ScoreGauge, Spinner, Skeleton, Toast
 
 **Infraestrutura:**
 - Docker Compose dev + prod (PostgreSQL 16+pgvector, Redis 7, Nginx TLS 1.3)
@@ -85,7 +85,7 @@ Deployment agora está 100% compatível com o VPS do Fundador:
 
 ### 🎉 Push Realizado com Sucesso (2026-04-16 19:05)
 
-**Repositório:** https://github.com/vinibogaz/segeo-plataform
+**Repositório:** https://github.com/vinibogaz/ads
 
 **Timeline de resolução:**
 
@@ -109,7 +109,7 @@ Deployment agora está 100% compatível com o VPS do Fundador:
 - **62 arquivos** de código (TypeScript + Python)
 - **Monorepo Turborepo** completo
 - **Apps:** API (Fastify), Web (Next.js 14), AI Worker (FastAPI)
-- **Packages:** @orffia/db, @orffia/shared, @orffia/ui
+- **Packages:** @ads/db, @ads/shared, @ads/ui
 - **Infra:** Docker Compose, GitHub Actions CI/CD, scripts de setup
 
 ### 🚀 Próximos Passos (Fundador)
@@ -168,7 +168,7 @@ Instruções completas de deployment postadas na [SYN-8](/SYN/issues/SYN-8):
 - infra/nginx/orffia-vhost.conf ✅
 
 **7. Código no GitHub** — ✅
-- Repositório: https://github.com/vinibogaz/segeo-plataform
+- Repositório: https://github.com/vinibogaz/ads
 - Todos os commits sincronizados
 
 #### 📋 Checklist de Validação SYN-9
@@ -189,7 +189,7 @@ Instruções completas de deployment postadas na [SYN-8](/SYN/issues/SYN-8):
 **Ação necessária do Fundador:**
 
 1. SSH no VPS: `ssh root@31.97.245.90`
-2. Clonar repo: `git clone https://github.com/vinibogaz/segeo-plataform.git /opt/orffia`
+2. Clonar repo: `git clone https://github.com/vinibogaz/ads.git /opt/orffia`
 3. Configurar .env (seguir .env.example)
 4. Criar database: `docker exec -i $(docker ps -q -f name=postgres) psql -U postgres < /opt/orffia/infra/scripts/init-database.sql`
 5. Deploy: `cd /opt/orffia/infra/compose && docker compose -p orffia -f docker-compose.prod.yml up -d`

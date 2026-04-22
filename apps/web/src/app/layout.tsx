@@ -18,13 +18,13 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: 'ORFFIA — Marketing Intelligence Hub',
-    template: '%s | ORFFIA',
+    default: 'Orffia Ads — Plataforma de Mídia Paga',
+    template: '%s | Orffia Ads',
   },
   description:
     'Plataforma de inteligência de marketing com IA. SEO, GEO Monitor, geração de conteúdo e muito mais.',
   keywords: ['SEO', 'GEO', 'marketing', 'IA', 'conteúdo', 'SaaS'],
-  authors: [{ name: 'ORFFIA' }],
+  authors: [{ name: 'Orffia Ads' }],
   robots: { index: false, follow: false }, // private app
 }
 

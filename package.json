@@ -12,9 +12,9 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "db:generate": "turbo run db:generate --filter=@orffia/db",
-    "db:migrate": "turbo run db:migrate --filter=@orffia/db",
-    "db:push": "turbo run db:push --filter=@orffia/db",
+    "db:generate": "turbo run db:generate --filter=@ads/db",
+    "db:migrate": "turbo run db:migrate --filter=@ads/db",
+    "db:push": "turbo run db:push --filter=@ads/db",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\" --ignore-path .gitignore",
     "clean": "turbo run clean && rm -rf node_modules"
   },

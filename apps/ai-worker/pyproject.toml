@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "orffia-ai-worker"
+name = "ads-ai-worker"
 version = "0.1.0"
-description = "ORFFIA AI Worker — content generation service"
+description = "Orffia Ads AI Worker — content generation service"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115.6",

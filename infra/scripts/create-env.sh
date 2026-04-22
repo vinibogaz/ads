@@ -20,7 +20,7 @@ AI_WORKER_SECRET=$(openssl rand -hex 16)
 
 cat > "$ENV_FILE" << EOF
 # ====================
-# ORFFIA — PRODUÇÃO
+# Orffia Ads — PRODUÇÃO
 # ====================
 NODE_ENV=production
 PORT=4000

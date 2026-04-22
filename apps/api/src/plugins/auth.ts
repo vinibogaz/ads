@@ -1,7 +1,7 @@
 import fp from 'fastify-plugin'
 import fastifyJwt from '@fastify/jwt'
 import type { FastifyInstance, FastifyRequest } from 'fastify'
-import type { JwtPayload } from '@orffia/shared'
+import type { JwtPayload } from '@ads/shared'
 import { env } from '../config/env.js'
 
 declare module 'fastify' {

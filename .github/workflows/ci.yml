@@ -75,7 +75,7 @@ jobs:
       - name: Run DB migrations
         env:
           DATABASE_URL: postgresql://orffia_app:test_password@localhost:5432/orffia_test
-        run: npm run db:migrate --workspace=@orffia/db
+        run: npm run db:migrate --workspace=@ads/db
 
       - name: Run API tests
         env:
@@ -138,7 +138,7 @@ jobs:
           file: infra/docker/Dockerfile.api
           target: production
           push: true
-          tags: ${{ steps.login-ecr.outputs.registry }}/orffia-api:${{ github.sha }},${{ steps.login-ecr.outputs.registry }}/orffia-api:latest
+          tags: ${{ steps.login-ecr.outputs.registry }}/ads-api:${{ github.sha }},${{ steps.login-ecr.outputs.registry }}/ads-api:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -149,7 +149,7 @@ jobs:
           file: infra/docker/Dockerfile.web
           target: production
           push: true
-          tags: ${{ steps.login-ecr.outputs.registry }}/orffia-web:${{ github.sha }},${{ steps.login-ecr.outputs.registry }}/orffia-web:latest
+          tags: ${{ steps.login-ecr.outputs.registry }}/ads-web:${{ github.sha }},${{ steps.login-ecr.outputs.registry }}/ads-web:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -160,7 +160,7 @@ jobs:
           file: infra/docker/Dockerfile.ai-worker
           target: production
           push: true
-          tags: ${{ steps.login-ecr.outputs.registry }}/orffia-ai-worker:${{ github.sha }},${{ steps.login-ecr.outputs.registry }}/orffia-ai-worker:latest
+          tags: ${{ steps.login-ecr.outputs.registry }}/ads-ai-worker:${{ github.sha }},${{ steps.login-ecr.outputs.registry }}/ads-ai-worker:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

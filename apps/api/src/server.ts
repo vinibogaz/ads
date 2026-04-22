@@ -77,7 +77,7 @@ app.setErrorHandler((error, request, reply) => {
 const start = async () => {
   try {
     await app.listen({ port: env.PORT, host: '0.0.0.0' })
-    app.log.info(`ORFFIA API running on port ${env.PORT}`)
+    app.log.info(`Orffia Ads API running on port ${env.PORT}`)
   } catch (error: unknown) {
     const err = error as Error
     app.log.error(err)

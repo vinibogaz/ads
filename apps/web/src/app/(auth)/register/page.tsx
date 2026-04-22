@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { RegisterForm } from '@/components/auth/RegisterForm'
 
-export const metadata: Metadata = { title: 'Criar conta — ORFFIA' }
+export const metadata: Metadata = { title: 'Criar conta — Orffia Ads' }
 
 export default function RegisterPage() {
   return (
@@ -12,7 +12,7 @@ export default function RegisterPage() {
             <div className="w-8 h-8 rounded-orf-md bg-orf-primary flex items-center justify-center">
               <span className="text-white font-bold text-sm">S</span>
             </div>
-            <span className="text-xl font-bold text-orf-text">ORFFIA</span>
+            <span className="text-xl font-bold text-orf-text">Orffia Ads</span>
           </div>
           <p className="text-orf-text-2 text-sm">Marketing Intelligence Hub</p>
         </div>

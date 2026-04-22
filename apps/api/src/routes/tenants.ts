@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { eq } from 'drizzle-orm'
-import { db, tenants } from '@orffia/db'
+import { db, tenants } from '@ads/db'
 import { z } from 'zod'
 
 const updateTenantSchema = z.object({

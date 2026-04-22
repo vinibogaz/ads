@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { eq, and } from 'drizzle-orm'
-import { db, cmsIntegrations, articles, contentSchedules } from '@orffia/db'
+import { db, cmsIntegrations, articles, contentSchedules } from '@ads/db'
 import { ghostPublish, ghostTest } from '../services/integrations/ghost.js'
 import { webflowPublish, webflowTest } from '../services/integrations/webflow.js'
 import { webhookDispatch, webhookTest } from '../services/integrations/webhook.js'

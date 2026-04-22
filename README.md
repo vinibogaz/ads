@@ -1,4 +1,4 @@
-# ORFFIA — Marketing Intelligence Hub
+# Orffia Ads — Plataforma de Mídia Paga
 
 Plataforma SaaS modular de inteligência de marketing: SEO, GEO, Ads, CRO, Growth.
 
@@ -29,7 +29,7 @@ EOF
 
 ```bash
 cd /opt
-git clone https://github.com/vinibogaz/segeo-plataform.git orffia
+git clone https://github.com/vinibogaz/ads.git orffia
 cd orffia
 ```
 
@@ -76,7 +76,7 @@ orffia/
 ├── packages/
 │   ├── shared/       # Tipos TypeScript compartilhados
 │   ├── db/           # Drizzle ORM + schema PostgreSQL
-│   └── ui/           # ORFFIA Design System (componentes React)
+│   └── ui/           # Orffia Ads Design System (componentes React)
 ├── infra/
 │   ├── compose/      # Docker Compose (dev + prod)
 │   ├── docker/       # Dockerfiles

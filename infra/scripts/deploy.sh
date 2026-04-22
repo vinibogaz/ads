@@ -10,7 +10,7 @@ DB_USER="evolution"
 DB_PASS="evolution123"
 DB_NAME="orffia"
 
-echo "=== ORFFIA Deploy ==="
+echo "=== Orffia Ads Deploy ==="
 echo ""
 
 # 0. Verificar .env
@@ -47,14 +47,14 @@ echo "✅ Dependências instaladas"
 
 echo ""
 echo "=== 4. Build do pacote db ==="
-npm run build --workspace=@orffia/db
-echo "✅ Build @orffia/db concluído"
+npm run build --workspace=@ads/db
+echo "✅ Build @ads/db concluído"
 
 echo ""
 echo "=== 5. Aplicar schema ao banco (Drizzle push) ==="
 # Usar IP direto pois deploy roda no host, não no container
 DATABASE_URL="postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:5432/${DB_NAME}" \
-  npm run db:push --workspace=@orffia/db
+  npm run db:push --workspace=@ads/db
 echo "✅ Schema aplicado"
 
 echo ""

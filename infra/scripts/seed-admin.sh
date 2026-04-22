@@ -9,7 +9,7 @@ API_URL="http://localhost:4000/api/v1"
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@orffia.io}"
 ADMIN_NAME="${ADMIN_NAME:-Admin}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-ChangeMe123!}"
-TENANT_NAME="${TENANT_NAME:-ORFFIA}"
+TENANT_NAME="${TENANT_NAME:-Orffia Ads}"
 TENANT_SLUG="${TENANT_SLUG:-orffia}"
 
 echo "=== Seed do Admin ==="
@@ -20,7 +20,7 @@ echo ""
 # Verificar se API está saudável
 if ! curl -sf http://localhost:4000/health > /dev/null; then
   echo "❌ API não está respondendo em localhost:4000"
-  echo "   Verifique com: docker logs orffia-api"
+  echo "   Verifique com: docker logs ads-api"
   exit 1
 fi
 

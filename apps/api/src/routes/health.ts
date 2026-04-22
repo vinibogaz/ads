@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { db } from '@orffia/db'
+import { db } from '@ads/db'
 import { sql } from 'drizzle-orm'
 
 export async function healthRoutes(app: FastifyInstance) {

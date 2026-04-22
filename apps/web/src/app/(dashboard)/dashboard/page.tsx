@@ -7,7 +7,7 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-orf-text">Dashboard</h1>
-        <p className="text-orf-text-2 mt-1">Bem-vindo à plataforma ORFFIA</p>
+        <p className="text-orf-text-2 mt-1">Bem-vindo à plataforma Orffia Ads</p>
       </div>
 
       {/* Stats cards */}

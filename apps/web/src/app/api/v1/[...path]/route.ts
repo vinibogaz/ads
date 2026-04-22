@@ -1,12 +1,12 @@
 /**
  * Catch-all proxy: Next.js → Fastify API (internal Docker network)
- * Browser calls /api/v1/* (same-origin) → this route forwards to orffia-api:4000
+ * Browser calls /api/v1/* (same-origin) → this route forwards to ads-api:4000
  * Eliminates need for port 4000 to be publicly accessible.
  */
 import { NextRequest, NextResponse } from 'next/server'
 
 // Internal Docker URL — web container can reach api container by service name
-const INTERNAL_API = process.env['INTERNAL_API_URL'] ?? 'http://orffia-api:4000'
+const INTERNAL_API = process.env['INTERNAL_API_URL'] ?? 'http://ads-api:4000'
 
 async function proxy(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   const { path } = await params

@@ -1,4 +1,4 @@
-// ORFFIA Design System — Component exports
+// Orffia Ads Design System — Component exports
 export * from './components/Button'
 export * from './components/Input'
 export * from './components/Card'
