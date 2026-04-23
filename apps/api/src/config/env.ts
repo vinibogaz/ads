@@ -30,6 +30,11 @@ const envSchema = z.object({
   // Rate limiting
   RATE_LIMIT_MAX: z.coerce.number().default(100),
   RATE_LIMIT_WINDOW: z.string().default('1 minute'),
+
+  // Meta Marketing API
+  META_APP_ID: z.string().optional(),
+  META_APP_SECRET: z.string().optional(),
+  META_REDIRECT_URI: z.string().optional().default('https://api-ads.orffia.com/api/v1/auth/meta/callback'),
 })
 
 const parsed = envSchema.safeParse(process.env)

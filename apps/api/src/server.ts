@@ -19,6 +19,7 @@ import { utmRoutes } from './routes/utm.js'
 import { adsIntegrationsRoutes } from './routes/ads-integrations.js'
 import { dashboardRoutes } from './routes/dashboard.js'
 import { conversionsRoutes } from './routes/conversions.js'
+import { metaOAuthRoutes } from './routes/meta-oauth.js'
 import { env } from './config/env.js'
 
 const app = Fastify({
@@ -63,6 +64,7 @@ await app.register(utmRoutes, { prefix: '/api/v1/utm' })
 await app.register(adsIntegrationsRoutes, { prefix: '/api/v1/ads-integrations' })
 await app.register(dashboardRoutes, { prefix: '/api/v1/dashboard' })
 await app.register(conversionsRoutes, { prefix: '/api/v1/conversions' })
+await app.register(metaOAuthRoutes, { prefix: '/api/v1/auth' })
 
 // Global error handler
 app.setErrorHandler((error, request, reply) => {
