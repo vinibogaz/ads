@@ -47,6 +47,9 @@ services:
       AI_WORKER_URL: http://ai-worker:8000
       AI_WORKER_SECRET: ${AI_WORKER_SECRET}
       CORS_ORIGIN: ${CORS_ORIGIN}
+      META_APP_ID: ${META_APP_ID:-}
+      META_APP_SECRET: ${META_APP_SECRET:-}
+      META_REDIRECT_URI: ${META_REDIRECT_URI:-https://api-ads.orffia.com/api/v1/auth/meta/callback}
     networks:
       - orffia-internal
       - orffia-external
