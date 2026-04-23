@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { api } from '@/lib/api'
 import type { AdsPlatformIntegration, CrmIntegration, AdsPlatform, CrmPlatform } from '@ads/shared'
@@ -77,6 +77,7 @@ export function IntegrationsView() {
   const [error, setError] = useState('')
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [connectingMeta, setConnectingMeta] = useState(false)
+  const hasPreSelected = useRef(false)
 
   const { data: platformsData, isLoading: loadingPlatforms } = useQuery({
     queryKey: ['ads-platforms'],
@@ -113,10 +114,14 @@ export function IntegrationsView() {
     }
   }, [searchParams, queryClient])
 
-  // When pendingMeta changes (after refetch), pre-select all
+  // Pre-select all once when modal first opens — never again while modal is open
   useEffect(() => {
-    if (showSelectionModal && pendingMeta.length > 0) {
+    if (showSelectionModal && pendingMeta.length > 0 && !hasPreSelected.current) {
       setSelectedIds(new Set(pendingMeta.map((p) => p.id)))
+      hasPreSelected.current = true
+    }
+    if (!showSelectionModal) {
+      hasPreSelected.current = false
     }
   }, [showSelectionModal, pendingMeta])
 
