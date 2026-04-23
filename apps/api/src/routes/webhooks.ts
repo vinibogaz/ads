@@ -154,6 +154,6 @@ export async function webhooksRoutes(app: FastifyInstance) {
       .set({ lastTriggeredAt: new Date(), updatedAt: new Date() })
       .where(eq(webhooks.id, webhookId))
 
-    return reply.status(201).send({ data: { leadId: lead.id } })
+    return reply.status(201).send({ data: { leadId: lead?.id } })
   })
 }
