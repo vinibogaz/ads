@@ -65,3 +65,5 @@ export async function apiRequest<T = unknown>(
 
   return res.json() as Promise<{ data: T }>
 }
+
+export const api = apiRequest
