@@ -34,10 +34,11 @@ export async function conversionsRoutes(app: FastifyInstance) {
     // Group by platform
     const byPlatform: Record<string, { total: number; sent: number; failed: number }> = {}
     for (const r of rows) {
-      if (!byPlatform[r.platform]) byPlatform[r.platform] = { total: 0, sent: 0, failed: 0 }
-      byPlatform[r.platform].total++
-      if (r.status === 'active') byPlatform[r.platform].sent++
-      if (r.status === 'error') byPlatform[r.platform].failed++
+      const entry = byPlatform[r.platform] ?? { total: 0, sent: 0, failed: 0 }
+      entry.total++
+      if (r.status === 'active') entry.sent++
+      if (r.status === 'error') entry.failed++
+      byPlatform[r.platform] = entry
     }
 
     // Group by event
