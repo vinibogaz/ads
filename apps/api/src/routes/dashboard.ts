@@ -58,19 +58,33 @@ export async function dashboardRoutes(app: FastifyInstance) {
     const wonLeads = leadRows.find((r) => r.status === 'won')?.count ?? 0
     const totalConversions = conversionRows.reduce((s, r) => s + r.count, 0)
 
-    const budgetByPlatform = budgetRows.map((b) => ({
-      platform: b.platform,
-      plannedAmount: parseFloat(b.plannedAmount),
-      spentAmount: parseFloat(b.spentAmount),
-      remainingAmount: parseFloat(b.plannedAmount) - parseFloat(b.spentAmount),
-      percentUsed:
-        parseFloat(b.plannedAmount) > 0
-          ? Math.round((parseFloat(b.spentAmount) / parseFloat(b.plannedAmount)) * 100)
-          : 0,
-      currency: b.currency,
-      month,
-      year,
-    }))
+    // Fetch integration names for budget rows that have integrationId
+    const integrationIds = budgetRows.map((b) => b.integrationId).filter(Boolean) as string[]
+    const integrationRows = integrationIds.length > 0
+      ? await db.query.adsPlatformIntegrations.findMany({
+          where: (t, { inArray }) => inArray(t.id, integrationIds),
+          columns: { id: true, name: true },
+        })
+      : []
+    const integrationMap = Object.fromEntries(integrationRows.map((i) => [i.id, i.name]))
+
+    const budgetByPlatform = budgetRows.map((b) => {
+      const planned = parseFloat(b.plannedAmount)
+      const spent = parseFloat(b.spentAmount)
+      return {
+        id: b.id,
+        platform: b.platform,
+        integrationId: b.integrationId ?? null,
+        integrationName: b.integrationId ? (integrationMap[b.integrationId] ?? null) : null,
+        plannedAmount: planned,
+        spentAmount: spent,
+        remainingAmount: planned - spent,
+        percentUsed: planned > 0 ? Math.round((spent / planned) * 100) : 0,
+        currency: b.currency,
+        month,
+        year,
+      }
+    })
 
     return reply.send({
       data: {

@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { eq, and } from 'drizzle-orm'
-import { db, adsPlatformIntegrations } from '@ads/db'
+import { db, adsPlatformIntegrations, budgets } from '@ads/db'
 import { env } from '../config/env.js'
 
 const META_GRAPH_URL = 'https://graph.facebook.com/v19.0'
@@ -211,6 +211,22 @@ export async function metaOAuthRoutes(app: FastifyInstance) {
       .set({ lastSyncAt: new Date(), updatedAt: new Date() })
       .where(eq(adsPlatformIntegrations.id, integrationId))
 
+    // Update budget spentAmount for this integration/month
+    const now2 = new Date()
+    const budgetRow = await db.query.budgets.findFirst({
+      where: and(
+        eq(budgets.tenantId, request.user.tid),
+        eq(budgets.integrationId, integrationId),
+        eq(budgets.month, now2.getMonth() + 1),
+        eq(budgets.year, now2.getFullYear()),
+      ),
+    })
+    if (budgetRow) {
+      await db.update(budgets)
+        .set({ spentAmount: spend.toString(), updatedAt: new Date() })
+        .where(eq(budgets.id, budgetRow.id))
+    }
+
     return reply.send({
       data: {
         accountId: integration.accountId,
@@ -218,6 +234,7 @@ export async function metaOAuthRoutes(app: FastifyInstance) {
         period: `${sinceDate} - ${untilDate}`,
         spend,
         leads,
+        budgetUpdated: !!budgetRow,
       }
     })
   })
