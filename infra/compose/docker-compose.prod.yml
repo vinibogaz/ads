@@ -35,7 +35,7 @@ services:
     container_name: ads-api
     restart: always
     ports:
-      - '4000:4000'
+      - '4002:4000'
     environment:
       NODE_ENV: production
       PORT: 4000
@@ -124,7 +124,7 @@ services:
     container_name: ads-web
     restart: always
     ports:
-      - '4001:3000'
+      - '4003:3000'
     environment:
       # INTERNAL_API_URL: Docker-internal URL used by server-side proxy routes
       INTERNAL_API_URL: http://ads-api:4000
