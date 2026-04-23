@@ -18,7 +18,7 @@ export async function metaOAuthRoutes(app: FastifyInstance) {
     // State: encode tenantId to recover after callback
     const state = Buffer.from(JSON.stringify({
       tid: request.user.tid,
-      uid: request.user.uid,
+      uid: request.user.sub,
     })).toString('base64url')
 
     const url = new URL(META_AUTH_URL)
