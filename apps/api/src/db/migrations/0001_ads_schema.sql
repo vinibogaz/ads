@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
   token_hash TEXT UNIQUE NOT NULL,
   family UUID NOT NULL,
   expires_at TIMESTAMPTZ NOT NULL,
-  revoked_at TIMESTAMPTZ,
+  is_revoked BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS refresh_tokens_user_idx ON refresh_tokens(user_id);
