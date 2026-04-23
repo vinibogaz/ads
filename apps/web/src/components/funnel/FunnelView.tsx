@@ -9,11 +9,11 @@ type StageWithLeads = FunnelStage & { leads: Lead[] }
 export function FunnelView() {
   const { data, isLoading } = useQuery({
     queryKey: ['funnel-overview'],
-    queryFn: () => api<{ data: StageWithLeads[] }>('/funnel/overview'),
+    queryFn: () => api<StageWithLeads[]>('/funnel/overview'),
   })
 
-  const stages = data?.data ?? []
-  const totalLeads = stages.reduce((s, st) => s + st.leadCount, 0)
+  const stages: StageWithLeads[] = data?.data ?? []
+  const totalLeads = stages.reduce((s, st) => s + (st.leadCount ?? 0), 0)
 
   return (
     <div className="space-y-6">

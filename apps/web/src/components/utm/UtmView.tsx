@@ -9,24 +9,22 @@ export function UtmView() {
     queryKey: ['utm-summary'],
     queryFn: () =>
       api<{
-        data: {
-          total: number
-          valid: number
-          invalid: number
-          withGclid: number
-          withFbclid: number
-          bySource: Record<string, number>
-        }
+        total: number
+        valid: number
+        invalid: number
+        withGclid: number
+        withFbclid: number
+        bySource: Record<string, number>
       }>('/utm/summary'),
   })
 
   const { data, isLoading } = useQuery({
     queryKey: ['utm-entries'],
-    queryFn: () => api<{ data: UtmEntry[] }>('/utm'),
+    queryFn: () => api<UtmEntry[]>('/utm'),
   })
 
   const summary = summaryData?.data
-  const entries = data?.data ?? []
+  const entries: UtmEntry[] = data?.data ?? []
 
   return (
     <div className="space-y-6">

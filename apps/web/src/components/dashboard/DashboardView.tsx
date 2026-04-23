@@ -54,7 +54,7 @@ export function DashboardView() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard-summary', month, year],
-    queryFn: () => api<{ data: DashboardData }>(`/dashboard/summary?month=${month}&year=${year}`),
+    queryFn: () => api<DashboardData>(`/dashboard/summary?month=${month}&year=${year}`),
   })
 
   const d = data?.data

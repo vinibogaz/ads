@@ -33,10 +33,10 @@ export function BudgetView() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['budget', month, year],
-    queryFn: () => api<{ data: BudgetSummary[] }>(`/budget?month=${month}&year=${year}`),
+    queryFn: () => api<BudgetSummary[]>(`/budget?month=${month}&year=${year}`),
   })
 
-  const budgets = data?.data ?? []
+  const budgets: BudgetSummary[] = data?.data ?? []
   const totalPlanned = budgets.reduce((s, b) => s + b.plannedAmount, 0)
   const totalSpent = budgets.reduce((s, b) => s + b.spentAmount, 0)
   const totalRemaining = totalPlanned - totalSpent

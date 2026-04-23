@@ -33,10 +33,10 @@ export function LeadsView() {
   const { data, isLoading } = useQuery({
     queryKey: ['leads', statusFilter],
     queryFn: () =>
-      api<{ data: Lead[] }>(`/leads${statusFilter ? `?status=${statusFilter}` : ''}`),
+      api<Lead[]>(`/leads${statusFilter ? `?status=${statusFilter}` : ''}`),
   })
 
-  const leads = data?.data ?? []
+  const leads: Lead[] = data?.data ?? []
 
   return (
     <div className="space-y-6">

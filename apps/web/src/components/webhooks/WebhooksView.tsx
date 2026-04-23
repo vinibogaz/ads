@@ -7,10 +7,10 @@ import type { Webhook } from '@ads/shared'
 export function WebhooksView() {
   const { data, isLoading } = useQuery({
     queryKey: ['webhooks'],
-    queryFn: () => api<{ data: Webhook[] }>('/webhooks'),
+    queryFn: () => api<Webhook[]>('/webhooks'),
   })
 
-  const webhooks = data?.data ?? []
+  const webhooks: Webhook[] = data?.data ?? []
 
   return (
     <div className="space-y-6">

@@ -44,16 +44,16 @@ const STATUS_LABELS = {
 export function IntegrationsView() {
   const { data: platformsData, isLoading: loadingPlatforms } = useQuery({
     queryKey: ['ads-platforms'],
-    queryFn: () => api<{ data: AdsPlatformIntegration[] }>('/ads-integrations/platforms'),
+    queryFn: () => api<AdsPlatformIntegration[]>('/ads-integrations/platforms'),
   })
 
   const { data: crmData, isLoading: loadingCrm } = useQuery({
     queryKey: ['crm-integrations'],
-    queryFn: () => api<{ data: CrmIntegration[] }>('/ads-integrations/crm'),
+    queryFn: () => api<CrmIntegration[]>('/ads-integrations/crm'),
   })
 
-  const platforms = platformsData?.data ?? []
-  const crms = crmData?.data ?? []
+  const platforms: AdsPlatformIntegration[] = platformsData?.data ?? []
+  const crms: CrmIntegration[] = crmData?.data ?? []
 
   return (
     <div className="space-y-8">
