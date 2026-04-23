@@ -106,17 +106,30 @@ export async function metaOAuthRoutes(app: FastifyInstance) {
     const accessToken = longTokenData.access_token ?? shortToken
     const expiresAt = new Date(Date.now() + (longTokenData.expires_in ?? 5184000) * 1000)
 
-    // Fetch all ad accounts
-    const accountsUrl = new URL(`${META_GRAPH_URL}/me/adaccounts`)
-    accountsUrl.searchParams.set('fields', 'id,name,account_status,currency')
-    accountsUrl.searchParams.set('access_token', accessToken)
-    const accountsRes = await fetch(accountsUrl.toString())
-    if (!accountsRes.ok) {
-      app.log.error({ status: accountsRes.status }, 'Failed to fetch Meta ad accounts')
-      return reply.redirect(`${base}/integrations?error=meta_token_failed`)
+    // Fetch all ad accounts (paginated — Meta returns max 25 per page)
+    type AdAccount = { id: string; name: string; account_status: number; currency: string }
+    const adAccounts: AdAccount[] = []
+    let nextUrl: string | null = (() => {
+      const u = new URL(`${META_GRAPH_URL}/me/adaccounts`)
+      u.searchParams.set('fields', 'id,name,account_status,currency')
+      u.searchParams.set('limit', '100')
+      u.searchParams.set('access_token', accessToken)
+      return u.toString()
+    })()
+
+    while (nextUrl) {
+      const res = await fetch(nextUrl)
+      if (!res.ok) {
+        app.log.error({ status: res.status }, 'Failed to fetch Meta ad accounts')
+        return reply.redirect(`${base}/integrations?error=meta_token_failed`)
+      }
+      const page = await res.json() as {
+        data: AdAccount[]
+        paging?: { next?: string }
+      }
+      adAccounts.push(...(page.data ?? []))
+      nextUrl = page.paging?.next ?? null
     }
-    const accountsData = await accountsRes.json() as { data: { id: string; name: string; account_status: number; currency: string }[] }
-    const adAccounts = accountsData.data ?? []
 
     const created: string[] = []
     for (const account of adAccounts) {
