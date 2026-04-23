@@ -1,13 +1,133 @@
 -- Orffia Ads — Schema Migration v1
--- Run after core/auth tables (0000_init.sql)
+-- Banco: orffia_ads (separado do orffia principal)
 
--- Enums
-CREATE TYPE IF NOT EXISTS ads_platform AS ENUM ('meta','google','linkedin','tiktok','twitter','pinterest','taboola','other');
-CREATE TYPE IF NOT EXISTS crm_platform AS ENUM ('rd_station','hubspot','pipedrive','nectar','moskit','salesforce','zoho','webhook','other');
-CREATE TYPE IF NOT EXISTS integration_status AS ENUM ('active','inactive','error','pending');
-CREATE TYPE IF NOT EXISTS lead_status AS ENUM ('new','no_contact','contacted','qualified','unqualified','opportunity','won','lost');
-CREATE TYPE IF NOT EXISTS conversion_event AS ENUM ('lead','qualified_lead','opportunity','sale','custom');
-CREATE TYPE IF NOT EXISTS webhook_method AS ENUM ('GET','POST','PUT','PATCH');
+-- Enums (usar DO $$ para idempotência)
+DO $$ BEGIN
+  CREATE TYPE ads_platform AS ENUM ('meta','google','linkedin','tiktok','twitter','pinterest','taboola','other');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE crm_platform AS ENUM ('rd_station','hubspot','pipedrive','nectar','moskit','salesforce','zoho','webhook','other');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE integration_status AS ENUM ('active','inactive','error','pending');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE lead_status AS ENUM ('new','no_contact','contacted','qualified','unqualified','opportunity','won','lost');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE conversion_event AS ENUM ('lead','qualified_lead','opportunity','sale','custom');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE webhook_method AS ENUM ('GET','POST','PUT','PATCH');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE tenant_plan AS ENUM ('trial','starter','pro','agency');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE tenant_status AS ENUM ('active','suspended','cancelled');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE user_role AS ENUM ('owner','admin','editor','viewer');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE user_status AS ENUM ('active','inactive','invited');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- Tenants
+CREATE TABLE IF NOT EXISTS tenants (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(255) NOT NULL,
+  slug VARCHAR(100) UNIQUE NOT NULL,
+  plan tenant_plan NOT NULL DEFAULT 'trial',
+  status tenant_status NOT NULL DEFAULT 'active',
+  settings JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Users
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  password_hash TEXT NOT NULL,
+  role user_role NOT NULL DEFAULT 'editor',
+  status user_status NOT NULL DEFAULT 'active',
+  avatar_url TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Refresh Tokens
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  tenant_id UUID NOT NULL,
+  token_hash TEXT UNIQUE NOT NULL,
+  family UUID NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  revoked_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS refresh_tokens_user_idx ON refresh_tokens(user_id);
+
+-- Password Reset Tokens
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash TEXT UNIQUE NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Audit Logs
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL,
+  user_id UUID,
+  action VARCHAR(100) NOT NULL,
+  entity_type VARCHAR(50),
+  entity_id UUID,
+  payload JSONB,
+  ip_address INET,
+  user_agent TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Consent Records
+CREATE TABLE IF NOT EXISTS consent_records (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type VARCHAR(50) NOT NULL,
+  granted BOOLEAN NOT NULL,
+  ip_address INET,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- User Invitations
+CREATE TABLE IF NOT EXISTS user_invitations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  email VARCHAR(255) NOT NULL,
+  role user_role NOT NULL DEFAULT 'editor',
+  token_hash TEXT UNIQUE NOT NULL,
+  invited_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  accepted_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
 -- Ads Platform Integrations
 CREATE TABLE IF NOT EXISTS ads_platform_integrations (
