@@ -1,7 +1,8 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { api } from '@/lib/api'
 import type { AdsPlatformIntegration, CrmIntegration, AdsPlatform, CrmPlatform } from '@ads/shared'
 
@@ -14,6 +15,11 @@ const ADS_PLATFORM_LABELS: Record<AdsPlatform, string> = {
   pinterest: 'Pinterest Ads',
   taboola: 'Taboola',
   other: 'Outro',
+}
+
+// Platforms that support OAuth — show redirect button instead of manual form
+const OAUTH_PLATFORMS: Partial<Record<AdsPlatform, boolean>> = {
+  meta: true,
 }
 
 const CRM_PLATFORM_LABELS: Record<CrmPlatform, string> = {
@@ -55,13 +61,55 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   )
 }
 
+// Meta logo SVG
+function MetaIcon() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1.086 14.432c-1.576-.398-2.768-1.813-2.768-3.502 0-.437.08-.858.23-1.25L7.01 10.432a5.507 5.507 0 00-.344 1.928c0 2.525 1.71 4.647 4.047 5.258l.201-1.186zm2.172 0l.201 1.186c2.337-.611 4.047-2.733 4.047-5.258 0-.665-.129-1.3-.363-1.882l-1.357 1.197c.148.383.228.8.228 1.235 0 1.69-1.192 3.104-2.756 3.522zm-.62-6.682l-1.83 1.614a2.64 2.64 0 00-.157.9c0 1.28.914 2.352 2.121 2.6l.45-2.652-.584-2.462zm.62 0l-.584 2.462.45 2.652c1.207-.248 2.121-1.32 2.121-2.6 0-.313-.056-.613-.157-.9l-1.83-1.614z" />
+    </svg>
+  )
+}
+
 export function IntegrationsView() {
   const queryClient = useQueryClient()
+  const searchParams = useSearchParams()
   const [showPlatformModal, setShowPlatformModal] = useState(false)
   const [showCrmModal, setShowCrmModal] = useState(false)
-  const [platformForm, setPlatformForm] = useState({ platform: 'meta' as AdsPlatform, name: '', accountId: '' })
+  const [platformForm, setPlatformForm] = useState({ platform: 'google' as AdsPlatform, name: '', accountId: '' })
   const [crmForm, setCrmForm] = useState({ platform: 'rd_station' as CrmPlatform, name: '' })
   const [error, setError] = useState('')
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [connectingMeta, setConnectingMeta] = useState(false)
+
+  // Handle callback from Meta OAuth
+  useEffect(() => {
+    const metaConnected = searchParams.get('meta_connected')
+    const metaError = searchParams.get('error')
+
+    if (metaConnected) {
+      const count = parseInt(metaConnected)
+      setToast({
+        type: 'success',
+        message: `Meta conectado com sucesso! ${count} conta${count !== 1 ? 's' : ''} importada${count !== 1 ? 's' : ''}.`,
+      })
+      queryClient.invalidateQueries({ queryKey: ['ads-platforms'] })
+      // Clean up URL params without navigation
+      window.history.replaceState({}, '', '/integrations')
+    } else if (metaError === 'meta_denied') {
+      setToast({ type: 'error', message: 'Autorização com Meta foi cancelada.' })
+      window.history.replaceState({}, '', '/integrations')
+    } else if (metaError === 'meta_token_failed') {
+      setToast({ type: 'error', message: 'Falha ao obter token do Meta. Tente novamente.' })
+      window.history.replaceState({}, '', '/integrations')
+    }
+  }, [searchParams, queryClient])
+
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 5000)
+    return () => clearTimeout(t)
+  }, [toast])
 
   const { data: platformsData, isLoading: loadingPlatforms } = useQuery({
     queryKey: ['ads-platforms'],
@@ -76,13 +124,25 @@ export function IntegrationsView() {
   const platforms: AdsPlatformIntegration[] = platformsData?.data ?? []
   const crms: CrmIntegration[] = crmData?.data ?? []
 
+  // Start Meta OAuth flow: fetch the URL from API (authenticated), then redirect browser
+  const handleConnectMeta = async () => {
+    setConnectingMeta(true)
+    try {
+      const res = await api<{ url: string }>('/auth/meta/url')
+      window.location.href = res.data.url
+    } catch (e: any) {
+      setToast({ type: 'error', message: e.message ?? 'Erro ao iniciar conexão com Meta' })
+      setConnectingMeta(false)
+    }
+  }
+
   const addPlatform = useMutation({
     mutationFn: (body: typeof platformForm) =>
       api('/ads-integrations/platforms', { method: 'POST', body: JSON.stringify(body) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ads-platforms'] })
       setShowPlatformModal(false)
-      setPlatformForm({ platform: 'meta', name: '', accountId: '' })
+      setPlatformForm({ platform: 'google', name: '', accountId: '' })
       setError('')
     },
     onError: (e: any) => setError(e.message ?? 'Erro ao salvar'),
@@ -110,14 +170,62 @@ export function IntegrationsView() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['crm-integrations'] }),
   })
 
+  const syncPlatform = useMutation({
+    mutationFn: (id: string) => api(`/auth/meta/sync/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ads-platforms'] })
+      setToast({ type: 'success', message: 'Sincronização concluída.' })
+    },
+    onError: (e: any) => setToast({ type: 'error', message: e.message ?? 'Erro ao sincronizar' }),
+  })
+
+  // Whether the selected platform uses OAuth
+  const isOAuthPlatform = OAUTH_PLATFORMS[platformForm.platform]
+
   return (
     <div className="space-y-8">
+      {/* Toast */}
+      {toast && (
+        <div
+          className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-orf shadow-lg text-sm font-medium transition-all ${
+            toast.type === 'success'
+              ? 'bg-emerald-600 text-white'
+              : 'bg-red-600 text-white'
+          }`}
+        >
+          {toast.message}
+        </div>
+      )}
+
       <div>
         <h1 className="text-xl font-bold text-orf-text">Integrações</h1>
         <p className="text-sm text-orf-text-2 mt-0.5">
           Conecte plataformas de anúncio e CRMs para ativar conversão offline
         </p>
       </div>
+
+      {/* Quick Connect: Meta */}
+      <section className="bg-orf-surface border border-orf-border rounded-orf p-5">
+        <h2 className="text-sm font-semibold text-orf-text mb-4">Conexão Rápida</h2>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 flex-1">
+            <div className="w-10 h-10 rounded-orf-sm bg-blue-600 flex items-center justify-center text-white shrink-0">
+              <MetaIcon />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-orf-text">Meta Ads</p>
+              <p className="text-xs text-orf-text-2">Facebook & Instagram Ads — OAuth seguro, importa todas as contas</p>
+            </div>
+          </div>
+          <button
+            onClick={handleConnectMeta}
+            disabled={connectingMeta}
+            className="px-4 py-2 bg-blue-600 text-white rounded-orf-sm text-xs font-medium hover:bg-blue-700 disabled:opacity-60 transition-colors whitespace-nowrap"
+          >
+            {connectingMeta ? 'Redirecionando...' : 'Conectar com Meta'}
+          </button>
+        </div>
+      </section>
 
       {/* Ads Platforms */}
       <section className="space-y-4">
@@ -127,7 +235,7 @@ export function IntegrationsView() {
             onClick={() => { setShowPlatformModal(true); setError('') }}
             className="px-3 py-1.5 bg-orf-primary text-white rounded-orf-sm text-xs font-medium hover:bg-orf-primary/90 transition-colors"
           >
-            + Conectar Plataforma
+            + Adicionar Manualmente
           </button>
         </div>
 
@@ -136,7 +244,7 @@ export function IntegrationsView() {
             <div className="col-span-2 py-8 text-center text-orf-text-2 text-sm">Carregando...</div>
           ) : platforms.length === 0 ? (
             <div className="col-span-2 bg-orf-surface border border-orf-border rounded-orf p-6 text-center text-sm text-orf-text-2">
-              Nenhuma plataforma conectada. Conecte Meta, Google, LinkedIn ou outras para ativar conversão offline.
+              Nenhuma plataforma conectada. Use a conexão rápida acima ou adicione manualmente.
             </div>
           ) : (
             platforms.map((p) => (
@@ -150,6 +258,15 @@ export function IntegrationsView() {
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLES[p.status]}`}>
                     {STATUS_LABELS[p.status]}
                   </span>
+                  {p.platform === 'meta' && (
+                    <button
+                      onClick={() => syncPlatform.mutate(p.id)}
+                      disabled={syncPlatform.isPending}
+                      className="text-xs text-orf-primary hover:text-orf-primary/80 transition-colors"
+                    >
+                      Sync
+                    </button>
+                  )}
                   <button
                     onClick={() => deletePlatform.mutate(p.id)}
                     className="text-xs text-red-400 hover:text-red-600 transition-colors"
@@ -211,9 +328,9 @@ export function IntegrationsView() {
         </div>
       </section>
 
-      {/* Modal: Conectar Plataforma */}
+      {/* Modal: Adicionar Plataforma Manualmente */}
       {showPlatformModal && (
-        <Modal title="Conectar Plataforma de Anúncio" onClose={() => setShowPlatformModal(false)}>
+        <Modal title="Adicionar Plataforma Manualmente" onClose={() => setShowPlatformModal(false)}>
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-orf-text-2 mb-1.5">Plataforma</label>
@@ -222,31 +339,43 @@ export function IntegrationsView() {
                 onChange={(e) => setPlatformForm((f) => ({ ...f, platform: e.target.value as AdsPlatform }))}
                 className="w-full px-3 py-2 bg-orf-surface-2 border border-orf-border rounded-orf-sm text-sm text-orf-text focus:outline-none focus:border-orf-primary"
               >
-                {(Object.entries(ADS_PLATFORM_LABELS) as [AdsPlatform, string][]).map(([v, l]) => (
-                  <option key={v} value={v}>{l}</option>
-                ))}
+                {(Object.entries(ADS_PLATFORM_LABELS) as [AdsPlatform, string][])
+                  .filter(([v]) => !OAUTH_PLATFORMS[v]) // hide OAuth platforms from manual form
+                  .map(([v, l]) => (
+                    <option key={v} value={v}>{l}</option>
+                  ))}
               </select>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-orf-text-2 mb-1.5">Nome da conta</label>
-              <input
-                type="text"
-                placeholder="Ex: HubCount Meta #1"
-                value={platformForm.name}
-                onChange={(e) => setPlatformForm((f) => ({ ...f, name: e.target.value }))}
-                className="w-full px-3 py-2 bg-orf-surface-2 border border-orf-border rounded-orf-sm text-sm text-orf-text placeholder:text-orf-text-3 focus:outline-none focus:border-orf-primary"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-orf-text-2 mb-1.5">Account ID <span className="text-orf-text-3">(opcional)</span></label>
-              <input
-                type="text"
-                placeholder="Ex: act_123456789"
-                value={platformForm.accountId}
-                onChange={(e) => setPlatformForm((f) => ({ ...f, accountId: e.target.value }))}
-                className="w-full px-3 py-2 bg-orf-surface-2 border border-orf-border rounded-orf-sm text-sm text-orf-text placeholder:text-orf-text-3 focus:outline-none focus:border-orf-primary"
-              />
-            </div>
+
+            {isOAuthPlatform ? (
+              <div className="bg-blue-50 border border-blue-200 rounded-orf-sm p-4 text-sm text-blue-700">
+                Esta plataforma usa OAuth. Feche este modal e use o botão <strong>"Conectar com Meta"</strong> acima.
+              </div>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-xs font-medium text-orf-text-2 mb-1.5">Nome da conta</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: HubCount Google Ads"
+                    value={platformForm.name}
+                    onChange={(e) => setPlatformForm((f) => ({ ...f, name: e.target.value }))}
+                    className="w-full px-3 py-2 bg-orf-surface-2 border border-orf-border rounded-orf-sm text-sm text-orf-text placeholder:text-orf-text-3 focus:outline-none focus:border-orf-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-orf-text-2 mb-1.5">Account ID <span className="text-orf-text-3">(opcional)</span></label>
+                  <input
+                    type="text"
+                    placeholder="Ex: 123-456-7890"
+                    value={platformForm.accountId}
+                    onChange={(e) => setPlatformForm((f) => ({ ...f, accountId: e.target.value }))}
+                    className="w-full px-3 py-2 bg-orf-surface-2 border border-orf-border rounded-orf-sm text-sm text-orf-text placeholder:text-orf-text-3 focus:outline-none focus:border-orf-primary"
+                  />
+                </div>
+              </>
+            )}
+
             {error && <p className="text-xs text-red-500">{error}</p>}
             <div className="flex gap-3 pt-1">
               <button
@@ -255,13 +384,15 @@ export function IntegrationsView() {
               >
                 Cancelar
               </button>
-              <button
-                onClick={() => addPlatform.mutate(platformForm)}
-                disabled={!platformForm.name || addPlatform.isPending}
-                className="flex-1 px-4 py-2 bg-orf-primary text-white rounded-orf-sm text-sm font-medium hover:bg-orf-primary/90 disabled:opacity-50 transition-colors"
-              >
-                {addPlatform.isPending ? 'Salvando...' : 'Conectar'}
-              </button>
+              {!isOAuthPlatform && (
+                <button
+                  onClick={() => addPlatform.mutate(platformForm)}
+                  disabled={!platformForm.name || addPlatform.isPending}
+                  className="flex-1 px-4 py-2 bg-orf-primary text-white rounded-orf-sm text-sm font-medium hover:bg-orf-primary/90 disabled:opacity-50 transition-colors"
+                >
+                  {addPlatform.isPending ? 'Salvando...' : 'Adicionar'}
+                </button>
+              )}
             </div>
           </div>
         </Modal>

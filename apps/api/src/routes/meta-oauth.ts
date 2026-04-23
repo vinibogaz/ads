@@ -31,6 +31,27 @@ export async function metaOAuthRoutes(app: FastifyInstance) {
     return reply.redirect(url.toString())
   })
 
+  // GET /api/v1/auth/meta/url — retorna a URL de autorização sem redirecionar (para uso via fetch no frontend)
+  app.get('/meta/url', { config: { skipAuth: false } }, async (request, reply) => {
+    if (!env.META_APP_ID) {
+      return reply.status(503).send({ error: 'META_NOT_CONFIGURED', message: 'Meta integration not configured' })
+    }
+
+    const state = Buffer.from(JSON.stringify({
+      tid: request.user.tid,
+      uid: request.user.sub,
+    })).toString('base64url')
+
+    const url = new URL(META_AUTH_URL)
+    url.searchParams.set('client_id', env.META_APP_ID)
+    url.searchParams.set('redirect_uri', env.META_REDIRECT_URI ?? '')
+    url.searchParams.set('scope', SCOPES)
+    url.searchParams.set('state', state)
+    url.searchParams.set('response_type', 'code')
+
+    return reply.send({ url: url.toString() })
+  })
+
   // GET /api/v1/auth/meta/callback — Meta redireciona aqui após autorização
   app.get('/meta/callback', { config: { skipAuth: true } }, async (request, reply) => {
     const { code, state, error } = request.query as Record<string, string>
