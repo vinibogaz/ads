@@ -8,6 +8,7 @@ const META_AUTH_URL = 'https://www.facebook.com/v19.0/dialog/oauth'
 const SCOPES = ['ads_read', 'ads_management', 'read_insights'].join(',')
 
 export async function metaOAuthRoutes(app: FastifyInstance) {
+  app.addHook('preHandler', app.authenticate)
 
   // GET /api/v1/auth/meta — inicia OAuth, redireciona para Facebook
   app.get('/meta', { config: { skipAuth: false } }, async (request, reply) => {
