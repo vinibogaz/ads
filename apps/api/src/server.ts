@@ -18,6 +18,7 @@ import { webhooksRoutes } from './routes/webhooks.js'
 import { utmRoutes } from './routes/utm.js'
 import { adsIntegrationsRoutes } from './routes/ads-integrations.js'
 import { dashboardRoutes } from './routes/dashboard.js'
+import { conversionsRoutes } from './routes/conversions.js'
 import { env } from './config/env.js'
 
 const app = Fastify({
@@ -61,6 +62,7 @@ await app.register(webhooksRoutes, { prefix: '/api/v1/webhooks' })
 await app.register(utmRoutes, { prefix: '/api/v1/utm' })
 await app.register(adsIntegrationsRoutes, { prefix: '/api/v1/ads-integrations' })
 await app.register(dashboardRoutes, { prefix: '/api/v1/dashboard' })
+await app.register(conversionsRoutes, { prefix: '/api/v1/conversions' })
 
 // Global error handler
 app.setErrorHandler((error, request, reply) => {
