@@ -42,7 +42,7 @@ export function FunnelView() {
           <div className="bg-orf-surface rounded-orf border border-orf-border p-5">
             <div className="flex gap-1 h-10 items-stretch">
               {stages.map((stage) => {
-                const pct = totalLeads > 0 ? (stage.leadCount / totalLeads) * 100 : 0
+                const pct = totalLeads > 0 ? ((stage.leadCount ?? 0) / totalLeads) * 100 : 0
                 return (
                   <div
                     key={stage.id}
@@ -51,9 +51,9 @@ export function FunnelView() {
                       width: `${Math.max(pct, 4)}%`,
                       backgroundColor: stage.color ?? '#6366f1',
                     }}
-                    title={`${stage.name}: ${stage.leadCount} leads`}
+                    title={`${stage.name}: ${stage.leadCount ?? 0} leads`}
                   >
-                    {stage.leadCount > 0 && stage.leadCount}
+                    {(stage.leadCount ?? 0) > 0 && stage.leadCount}
                   </div>
                 )
               })}
@@ -84,7 +84,7 @@ export function FunnelView() {
                     <span className="text-xs font-semibold text-orf-text">{stage.name}</span>
                   </div>
                   <span className="text-xs text-orf-text-3 bg-orf-surface-2 px-2 py-0.5 rounded-full">
-                    {stage.leadCount}
+                    {stage.leadCount ?? 0}
                   </span>
                 </div>
 
@@ -103,9 +103,9 @@ export function FunnelView() {
                       )}
                     </div>
                   ))}
-                  {stage.leadCount > 10 && (
+                  {(stage.leadCount ?? 0) > 10 && (
                     <p className="text-xs text-orf-text-3 text-center py-1">
-                      +{stage.leadCount - 10} mais
+                      +{(stage.leadCount ?? 0) - 10} mais
                     </p>
                   )}
                 </div>
