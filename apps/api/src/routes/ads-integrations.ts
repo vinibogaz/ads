@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, inArray, notInArray } from 'drizzle-orm'
 import { db, adsPlatformIntegrations, crmIntegrations } from '@ads/db'
 import { z } from 'zod'
 
@@ -68,6 +68,39 @@ export async function adsIntegrationsRoutes(app: FastifyInstance) {
       .returning()
 
     return reply.send({ data: { ...updated, credentials: undefined } })
+  })
+
+  // POST /api/v1/ads-integrations/platforms/confirm-selection
+  // Ativa as contas selecionadas (keep) e deleta as pendentes não selecionadas
+  app.post('/platforms/confirm-selection', async (request, reply) => {
+    const { keep } = z.object({ keep: z.array(z.string()) }).parse(request.body)
+
+    if (keep.length > 0) {
+      // Ativa as selecionadas
+      await db.update(adsPlatformIntegrations)
+        .set({ status: 'active', updatedAt: new Date() })
+        .where(and(
+          eq(adsPlatformIntegrations.tenantId, request.user.tid),
+          inArray(adsPlatformIntegrations.id, keep),
+        ))
+
+      // Deleta as pendentes não selecionadas
+      await db.delete(adsPlatformIntegrations)
+        .where(and(
+          eq(adsPlatformIntegrations.tenantId, request.user.tid),
+          eq(adsPlatformIntegrations.status, 'pending'),
+          notInArray(adsPlatformIntegrations.id, keep),
+        ))
+    } else {
+      // Nenhuma selecionada — deleta todas as pendentes
+      await db.delete(adsPlatformIntegrations)
+        .where(and(
+          eq(adsPlatformIntegrations.tenantId, request.user.tid),
+          eq(adsPlatformIntegrations.status, 'pending'),
+        ))
+    }
+
+    return reply.send({ data: { activated: keep.length } })
   })
 
   // DELETE /api/v1/ads-integrations/platforms/:id

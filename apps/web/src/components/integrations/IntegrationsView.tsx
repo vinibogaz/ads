@@ -17,10 +17,7 @@ const ADS_PLATFORM_LABELS: Record<AdsPlatform, string> = {
   other: 'Outro',
 }
 
-// Platforms that support OAuth — show redirect button instead of manual form
-const OAUTH_PLATFORMS: Partial<Record<AdsPlatform, boolean>> = {
-  meta: true,
-}
+const OAUTH_PLATFORMS: Partial<Record<AdsPlatform, boolean>> = { meta: true }
 
 const CRM_PLATFORM_LABELS: Record<CrmPlatform, string> = {
   rd_station: 'RD Station',
@@ -40,13 +37,12 @@ const STATUS_STYLES = {
   error: 'bg-red-100 text-red-600',
   pending: 'bg-yellow-100 text-yellow-700',
 }
-
 const STATUS_LABELS = { active: 'Ativo', inactive: 'Inativo', error: 'Erro', pending: 'Pendente' }
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-orf-surface border border-orf-border rounded-orf w-full max-w-md mx-4 shadow-xl">
+      <div className="bg-orf-surface border border-orf-border rounded-orf w-full max-w-lg mx-4 shadow-xl">
         <div className="flex items-center justify-between px-5 py-4 border-b border-orf-border">
           <h2 className="text-sm font-semibold text-orf-text">{title}</h2>
           <button onClick={onClose} className="text-orf-text-2 hover:text-orf-text transition-colors">
@@ -61,7 +57,6 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   )
 }
 
-// Meta logo SVG
 function MetaIcon() {
   return (
     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -75,41 +70,13 @@ export function IntegrationsView() {
   const searchParams = useSearchParams()
   const [showPlatformModal, setShowPlatformModal] = useState(false)
   const [showCrmModal, setShowCrmModal] = useState(false)
+  const [showSelectionModal, setShowSelectionModal] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [platformForm, setPlatformForm] = useState({ platform: 'google' as AdsPlatform, name: '', accountId: '' })
   const [crmForm, setCrmForm] = useState({ platform: 'rd_station' as CrmPlatform, name: '' })
   const [error, setError] = useState('')
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [connectingMeta, setConnectingMeta] = useState(false)
-
-  // Handle callback from Meta OAuth
-  useEffect(() => {
-    const metaConnected = searchParams.get('meta_connected')
-    const metaError = searchParams.get('error')
-
-    if (metaConnected) {
-      const count = parseInt(metaConnected)
-      setToast({
-        type: 'success',
-        message: `Meta conectado com sucesso! ${count} conta${count !== 1 ? 's' : ''} importada${count !== 1 ? 's' : ''}.`,
-      })
-      queryClient.invalidateQueries({ queryKey: ['ads-platforms'] })
-      // Clean up URL params without navigation
-      window.history.replaceState({}, '', '/integrations')
-    } else if (metaError === 'meta_denied') {
-      setToast({ type: 'error', message: 'Autorização com Meta foi cancelada.' })
-      window.history.replaceState({}, '', '/integrations')
-    } else if (metaError === 'meta_token_failed') {
-      setToast({ type: 'error', message: 'Falha ao obter token do Meta. Tente novamente.' })
-      window.history.replaceState({}, '', '/integrations')
-    }
-  }, [searchParams, queryClient])
-
-  // Auto-dismiss toast
-  useEffect(() => {
-    if (!toast) return
-    const t = setTimeout(() => setToast(null), 5000)
-    return () => clearTimeout(t)
-  }, [toast])
 
   const { data: platformsData, isLoading: loadingPlatforms } = useQuery({
     queryKey: ['ads-platforms'],
@@ -123,8 +90,43 @@ export function IntegrationsView() {
 
   const platforms: AdsPlatformIntegration[] = platformsData?.data ?? []
   const crms: CrmIntegration[] = crmData?.data ?? []
+  const pendingMeta = platforms.filter((p) => p.platform === 'meta' && p.status === 'pending')
+  const activePlatforms = platforms.filter((p) => p.status !== 'pending')
 
-  // Start Meta OAuth flow: fetch the URL from API (authenticated), then redirect browser
+  // Handle callback from Meta OAuth
+  useEffect(() => {
+    const metaSelect = searchParams.get('meta_select')
+    const metaError = searchParams.get('error')
+
+    if (metaSelect) {
+      window.history.replaceState({}, '', '/integrations')
+      // Wait for platforms query to load, then open selection modal
+      queryClient.invalidateQueries({ queryKey: ['ads-platforms'] }).then(() => {
+        setShowSelectionModal(true)
+      })
+    } else if (metaError === 'meta_denied') {
+      setToast({ type: 'error', message: 'Autorização com Meta foi cancelada.' })
+      window.history.replaceState({}, '', '/integrations')
+    } else if (metaError === 'meta_token_failed') {
+      setToast({ type: 'error', message: 'Falha ao obter token do Meta. Tente novamente.' })
+      window.history.replaceState({}, '', '/integrations')
+    }
+  }, [searchParams, queryClient])
+
+  // When selection modal opens, pre-select all pending accounts
+  useEffect(() => {
+    if (showSelectionModal && pendingMeta.length > 0) {
+      setSelectedIds(new Set(pendingMeta.map((p) => p.id)))
+    }
+  }, [showSelectionModal, pendingMeta.length])
+
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 5000)
+    return () => clearTimeout(t)
+  }, [toast])
+
   const handleConnectMeta = async () => {
     setConnectingMeta(true)
     try {
@@ -135,6 +137,24 @@ export function IntegrationsView() {
       setConnectingMeta(false)
     }
   }
+
+  const confirmSelection = useMutation({
+    mutationFn: (keep: string[]) =>
+      api('/ads-integrations/platforms/confirm-selection', {
+        method: 'POST',
+        body: JSON.stringify({ keep }),
+      }),
+    onSuccess: (_, keep) => {
+      queryClient.invalidateQueries({ queryKey: ['ads-platforms'] })
+      setShowSelectionModal(false)
+      setSelectedIds(new Set())
+      setToast({
+        type: 'success',
+        message: `${keep.length} conta${keep.length !== 1 ? 's' : ''} Meta ativada${keep.length !== 1 ? 's' : ''} com sucesso!`,
+      })
+    },
+    onError: (e: any) => setToast({ type: 'error', message: e.message ?? 'Erro ao confirmar seleção' }),
+  })
 
   const addPlatform = useMutation({
     mutationFn: (body: typeof platformForm) =>
@@ -179,20 +199,24 @@ export function IntegrationsView() {
     onError: (e: any) => setToast({ type: 'error', message: e.message ?? 'Erro ao sincronizar' }),
   })
 
-  // Whether the selected platform uses OAuth
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
   const isOAuthPlatform = OAUTH_PLATFORMS[platformForm.platform]
 
   return (
     <div className="space-y-8">
       {/* Toast */}
       {toast && (
-        <div
-          className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-orf shadow-lg text-sm font-medium transition-all ${
-            toast.type === 'success'
-              ? 'bg-emerald-600 text-white'
-              : 'bg-red-600 text-white'
-          }`}
-        >
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-orf shadow-lg text-sm font-medium ${
+          toast.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'
+        }`}>
           {toast.message}
         </div>
       )}
@@ -214,7 +238,7 @@ export function IntegrationsView() {
             </div>
             <div>
               <p className="text-sm font-medium text-orf-text">Meta Ads</p>
-              <p className="text-xs text-orf-text-2">Facebook & Instagram Ads — OAuth seguro, importa todas as contas</p>
+              <p className="text-xs text-orf-text-2">Facebook & Instagram Ads — OAuth seguro, você escolhe quais contas monitorar</p>
             </div>
           </div>
           <button
@@ -242,12 +266,12 @@ export function IntegrationsView() {
         <div className="grid grid-cols-2 gap-4">
           {loadingPlatforms ? (
             <div className="col-span-2 py-8 text-center text-orf-text-2 text-sm">Carregando...</div>
-          ) : platforms.length === 0 ? (
+          ) : activePlatforms.length === 0 ? (
             <div className="col-span-2 bg-orf-surface border border-orf-border rounded-orf p-6 text-center text-sm text-orf-text-2">
               Nenhuma plataforma conectada. Use a conexão rápida acima ou adicione manualmente.
             </div>
           ) : (
-            platforms.map((p) => (
+            activePlatforms.map((p) => (
               <div key={p.id} className="bg-orf-surface border border-orf-border rounded-orf p-4 flex items-center justify-between">
                 <div>
                   <p className="font-medium text-orf-text text-sm">{p.name}</p>
@@ -328,6 +352,83 @@ export function IntegrationsView() {
         </div>
       </section>
 
+      {/* Modal: Seleção de contas Meta */}
+      {showSelectionModal && (
+        <Modal
+          title="Selecionar Contas Meta"
+          onClose={() => {
+            // Fechar sem selecionar deleta todas as pendentes
+            confirmSelection.mutate([])
+          }}
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-orf-text-2">
+              Encontramos <strong className="text-orf-text">{pendingMeta.length} conta{pendingMeta.length !== 1 ? 's' : ''}</strong> vinculada{pendingMeta.length !== 1 ? 's' : ''} ao seu Meta Business. Selecione quais deseja monitorar:
+            </p>
+
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {pendingMeta.map((p) => (
+                <label
+                  key={p.id}
+                  className={`flex items-center gap-3 p-3 rounded-orf-sm border cursor-pointer transition-colors ${
+                    selectedIds.has(p.id)
+                      ? 'border-orf-primary bg-orf-primary/5'
+                      : 'border-orf-border hover:border-orf-primary/50'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(p.id)}
+                    onChange={() => toggleSelect(p.id)}
+                    className="w-4 h-4 accent-orf-primary"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-orf-text truncate">{p.name}</p>
+                    {p.accountId && <p className="text-xs text-orf-text-3">ID: {p.accountId}</p>}
+                    {(p.meta as any)?.currency && (
+                      <p className="text-xs text-orf-text-3">Moeda: {(p.meta as any).currency}</p>
+                    )}
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
+              <button
+                onClick={() => setSelectedIds(new Set(pendingMeta.map((p) => p.id)))}
+                className="text-xs text-orf-primary hover:underline"
+              >
+                Selecionar todas
+              </button>
+              <button
+                onClick={() => setSelectedIds(new Set())}
+                className="text-xs text-orf-text-3 hover:text-orf-text-2"
+              >
+                Limpar seleção
+              </button>
+            </div>
+
+            <div className="flex gap-3 pt-1 border-t border-orf-border">
+              <button
+                onClick={() => confirmSelection.mutate([])}
+                className="flex-1 px-4 py-2 border border-orf-border rounded-orf-sm text-sm text-orf-text-2 hover:text-orf-text transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => confirmSelection.mutate([...selectedIds])}
+                disabled={selectedIds.size === 0 || confirmSelection.isPending}
+                className="flex-1 px-4 py-2 bg-orf-primary text-white rounded-orf-sm text-sm font-medium hover:bg-orf-primary/90 disabled:opacity-50 transition-colors"
+              >
+                {confirmSelection.isPending
+                  ? 'Ativando...'
+                  : `Ativar ${selectedIds.size} conta${selectedIds.size !== 1 ? 's' : ''}`}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
       {/* Modal: Adicionar Plataforma Manualmente */}
       {showPlatformModal && (
         <Modal title="Adicionar Plataforma Manualmente" onClose={() => setShowPlatformModal(false)}>
@@ -340,7 +441,7 @@ export function IntegrationsView() {
                 className="w-full px-3 py-2 bg-orf-surface-2 border border-orf-border rounded-orf-sm text-sm text-orf-text focus:outline-none focus:border-orf-primary"
               >
                 {(Object.entries(ADS_PLATFORM_LABELS) as [AdsPlatform, string][])
-                  .filter(([v]) => !OAUTH_PLATFORMS[v]) // hide OAuth platforms from manual form
+                  .filter(([v]) => !OAUTH_PLATFORMS[v])
                   .map(([v, l]) => (
                     <option key={v} value={v}>{l}</option>
                   ))}
@@ -349,7 +450,7 @@ export function IntegrationsView() {
 
             {isOAuthPlatform ? (
               <div className="bg-blue-50 border border-blue-200 rounded-orf-sm p-4 text-sm text-blue-700">
-                Esta plataforma usa OAuth. Feche este modal e use o botão <strong>"Conectar com Meta"</strong> acima.
+                Esta plataforma usa OAuth. Use o botão <strong>"Conectar com Meta"</strong> acima.
               </div>
             ) : (
               <>

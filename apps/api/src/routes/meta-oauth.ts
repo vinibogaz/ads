@@ -122,11 +122,11 @@ export async function metaOAuthRoutes(app: FastifyInstance) {
       })
 
       if (existing) {
-        // Update token
+        // Update token, set pending for re-selection
         await db.update(adsPlatformIntegrations)
           .set({
             credentials: { accessToken },
-            status: account.account_status === 1 ? 'active' : 'inactive',
+            status: 'pending',
             updatedAt: new Date(),
           })
           .where(eq(adsPlatformIntegrations.id, existing.id))
@@ -138,7 +138,7 @@ export async function metaOAuthRoutes(app: FastifyInstance) {
           name: account.name,
           accountId: account.id,
           credentials: { accessToken },
-          status: account.account_status === 1 ? 'active' : 'inactive',
+          status: 'pending',
           meta: { currency: account.currency },
         }).returning()
         if (integration) created.push(integration.id)
@@ -147,8 +147,8 @@ export async function metaOAuthRoutes(app: FastifyInstance) {
 
     app.log.info({ tenantId, accountsFound: adAccounts.length }, 'Meta OAuth completed')
 
-    // Redirect back to integrations page with success
-    return reply.redirect(`https://ads.orffia.com/integrations?meta_connected=${created.length}`)
+    // Redirect back to integrations page — user selects which accounts to activate
+    return reply.redirect(`https://ads.orffia.com/integrations?meta_select=${created.length}`)
   })
 
   // GET /api/v1/auth/meta/sync/:integrationId — sincroniza dados de uma conta
