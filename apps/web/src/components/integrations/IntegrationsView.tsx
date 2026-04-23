@@ -100,8 +100,8 @@ export function IntegrationsView() {
 
     if (metaSelect) {
       window.history.replaceState({}, '', '/integrations')
-      // Wait for platforms query to load, then open selection modal
-      queryClient.invalidateQueries({ queryKey: ['ads-platforms'] }).then(() => {
+      // refetchQueries waits for the refetch to complete before opening the modal
+      queryClient.refetchQueries({ queryKey: ['ads-platforms'] }).then(() => {
         setShowSelectionModal(true)
       })
     } else if (metaError === 'meta_denied') {
@@ -113,12 +113,12 @@ export function IntegrationsView() {
     }
   }, [searchParams, queryClient])
 
-  // When selection modal opens, pre-select all pending accounts
+  // When pendingMeta changes (after refetch), pre-select all
   useEffect(() => {
     if (showSelectionModal && pendingMeta.length > 0) {
       setSelectedIds(new Set(pendingMeta.map((p) => p.id)))
     }
-  }, [showSelectionModal, pendingMeta.length])
+  }, [showSelectionModal, pendingMeta])
 
   // Auto-dismiss toast
   useEffect(() => {
@@ -150,10 +150,15 @@ export function IntegrationsView() {
       setSelectedIds(new Set())
       setToast({
         type: 'success',
-        message: `${keep.length} conta${keep.length !== 1 ? 's' : ''} Meta ativada${keep.length !== 1 ? 's' : ''} com sucesso!`,
+        message: keep.length > 0
+          ? `${keep.length} conta${keep.length !== 1 ? 's' : ''} Meta ativada${keep.length !== 1 ? 's' : ''} com sucesso!`
+          : 'Nenhuma conta selecionada.',
       })
     },
-    onError: (e: any) => setToast({ type: 'error', message: e.message ?? 'Erro ao confirmar seleção' }),
+    onError: (e: any) => {
+      setToast({ type: 'error', message: e.message ?? 'Erro ao confirmar seleção' })
+      setShowSelectionModal(false)
+    },
   })
 
   const addPlatform = useMutation({
