@@ -344,7 +344,9 @@ export const googleSheetsIntegrations = pgTable(
     spreadsheetId: varchar('spreadsheet_id', { length: 255 }).notNull(),
     sheetName: varchar('sheet_name', { length: 255 }).notNull().default('Sheet1'),
     fieldMapping: jsonb('field_mapping').notNull().default({}), // { lead_field: column_letter }
-    credentials: jsonb('credentials').notNull().default({}), // service account JSON
+    credentials: jsonb('credentials').notNull().default({}), // OAuth tokens
+    googleEmail: varchar('google_email', { length: 255 }), // connected Google account email
+    spreadsheetTitle: varchar('spreadsheet_title', { length: 255 }), // friendly title of the sheet
     status: integrationStatusEnum('status').notNull().default('active'),
     lastSyncAt: timestamp('last_sync_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
