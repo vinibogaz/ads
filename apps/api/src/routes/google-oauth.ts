@@ -176,6 +176,7 @@ export async function googleOAuthRoutes(app: FastifyInstance) {
         status: 'pending',
       }).returning()
 
+      if (!row) throw new Error('Failed to create integration record')
       return reply.redirect(`${base}/integrations?google_setup=${row.id}`)
     } catch (e: any) {
       app.log.error({ err: e.message }, 'Google OAuth callback failed')
