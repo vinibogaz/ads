@@ -103,7 +103,7 @@ export function LeadsView() {
       value: lead.value ? String(parseFloat(lead.value)) : '',
       mrr: lead.mrr ? String(parseFloat(lead.mrr)) : '',
       implantation: lead.implantation ? String(parseFloat(lead.implantation)) : '',
-      closedAt: lead.closedAt ? lead.closedAt.split('T')[0] : '',
+      closedAt: lead.closedAt ? (lead.closedAt.split('T')[0] ?? '') : '',
     })
   }
 
