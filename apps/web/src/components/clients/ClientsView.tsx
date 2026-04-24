@@ -124,7 +124,7 @@ export function ClientsView() {
                     className="w-9 h-9 rounded-orf-sm flex items-center justify-center text-white font-bold text-sm shrink-0"
                     style={{ backgroundColor: c.color }}
                   >
-                    {c.name[0].toUpperCase()}
+                    {c.name.charAt(0).toUpperCase()}
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-orf-text">{c.name}</p>
