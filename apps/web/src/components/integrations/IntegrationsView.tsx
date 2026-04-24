@@ -598,7 +598,10 @@ export function IntegrationsView() {
       const res = await api<{ url: string }>('/auth/google-ads/url')
       window.location.href = res.data.url
     } catch (e: any) {
-      setToast({ type: 'error', message: e.message ?? 'Erro ao iniciar conexão com Google Ads' })
+      const msg = e.error === 'GOOGLE_NOT_CONFIGURED'
+        ? 'Google Ads não configurado no servidor. Adicione GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET ao .env e reinicie o serviço.'
+        : (e.message ?? 'Erro ao iniciar conexão com Google Ads')
+      setToast({ type: 'error', message: msg })
       setConnectingGoogleAds(false)
     }
   }
@@ -620,7 +623,10 @@ export function IntegrationsView() {
       const res = await api<{ url: string }>('/crm/hubspot/url')
       window.location.href = res.data.url
     } catch (e: any) {
-      setToast({ type: 'error', message: e.message ?? 'Erro ao iniciar conexão com HubSpot' })
+      const msg = e.error === 'HUBSPOT_NOT_CONFIGURED'
+        ? 'HubSpot não configurado no servidor. Adicione HUBSPOT_CLIENT_ID e HUBSPOT_CLIENT_SECRET ao .env e reinicie o serviço.'
+        : (e.message ?? 'Erro ao iniciar conexão com HubSpot')
+      setToast({ type: 'error', message: msg })
       setConnectingHubSpot(false)
     }
   }
@@ -783,7 +789,7 @@ export function IntegrationsView() {
             <button
               onClick={handleConnectGoogleAds}
               disabled={connectingGoogleAds}
-              className="px-4 py-2 bg-white border border-orf-border text-orf-text rounded-orf-sm text-xs font-medium hover:bg-orf-surface-2 disabled:opacity-60 transition-colors whitespace-nowrap flex items-center gap-2"
+              className="px-4 py-2 bg-white border border-gray-300 text-gray-800 rounded-orf-sm text-xs font-medium hover:bg-gray-100 disabled:opacity-60 transition-colors whitespace-nowrap flex items-center gap-2"
             >
               {connectingGoogleAds ? 'Redirecionando...' : '+ Conectar Google Ads'}
             </button>

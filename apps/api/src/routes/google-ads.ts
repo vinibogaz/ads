@@ -105,7 +105,7 @@ export async function googleAdsRoutes(app: FastifyInstance) {
   // GET /api/v1/auth/google-ads/url
   app.get('/google-ads/url', { preHandler: [app.authenticate] }, async (request, reply) => {
     if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
-      return reply.status(503).send({ error: 'GOOGLE_NOT_CONFIGURED' })
+      return reply.status(503).send({ error: 'GOOGLE_NOT_CONFIGURED', message: 'Google Ads não configurado. Adicione GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET ao servidor.' })
     }
     const state = Buffer.from(JSON.stringify({ tid: request.user.tid, uid: request.user.sub })).toString('base64url')
     return reply.send({ data: { url: buildOAuthUrl(state) } })
