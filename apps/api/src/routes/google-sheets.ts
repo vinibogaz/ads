@@ -4,7 +4,22 @@ import { db, googleSheetsIntegrations, leads } from '@ads/db'
 import { z } from 'zod'
 import { getValidGoogleToken } from './google-oauth.js'
 
-const LEAD_FIELDS = ['name', 'email', 'phone', 'company', 'status', 'utmSource', 'utmMedium', 'utmCampaign', 'utmContent', 'utmTerm', 'createdAt'] as const
+const LEAD_FIELDS = [
+  'name', 'email', 'phone', 'company', 'status',
+  'utmSource', 'utmMedium', 'utmCampaign', 'utmContent', 'utmTerm',
+  'gclid', 'fbclid',
+  'value', 'mrr', 'implantation', 'closedAt',
+  'createdAt',
+] as const
+
+const LEAD_FIELD_LABELS: Record<string, string> = {
+  name: 'Nome', email: 'E-mail', phone: 'Telefone', company: 'Empresa',
+  status: 'Status', utmSource: 'UTM Source', utmMedium: 'UTM Medium',
+  utmCampaign: 'UTM Campaign', utmContent: 'UTM Content', utmTerm: 'UTM Term',
+  gclid: 'GCLID (Google)', fbclid: 'FBCLID (Meta)',
+  value: 'Valor da Venda', mrr: 'MRR', implantation: 'Implantação', closedAt: 'Data de Fechamento',
+  createdAt: 'Data de Entrada',
+}
 
 const completeSetupSchema = z.object({
   name: z.string().min(1).max(255),
@@ -53,8 +68,9 @@ function buildLeadRows(leadRows: any[], fieldMapping: Record<string, string>): s
 }
 
 const DEFAULT_FIELD_MAPPING = {
-  name: 'A', email: 'B', phone: 'C', company: 'D',
-  status: 'E', utmSource: 'F', utmMedium: 'G', utmCampaign: 'H', createdAt: 'I',
+  name: 'A', email: 'B', phone: 'C', company: 'D', status: 'E',
+  utmSource: 'F', utmMedium: 'G', utmCampaign: 'H',
+  value: 'I', mrr: 'J', closedAt: 'K', createdAt: 'L',
 }
 
 export async function googleSheetsRoutes(app: FastifyInstance) {
@@ -160,12 +176,7 @@ export async function googleSheetsRoutes(app: FastifyInstance) {
     return reply.send({
       data: LEAD_FIELDS.map((f) => ({
         field: f,
-        label: {
-          name: 'Nome', email: 'E-mail', phone: 'Telefone', company: 'Empresa',
-          status: 'Status', utmSource: 'UTM Source', utmMedium: 'UTM Medium',
-          utmCampaign: 'UTM Campaign', utmContent: 'UTM Content', utmTerm: 'UTM Term',
-          createdAt: 'Data de criação',
-        }[f] ?? f,
+        label: LEAD_FIELD_LABELS[f] ?? f,
       })),
     })
   })

@@ -493,6 +493,57 @@ function GoogleSheetsSection({ onGoogleSetup }: { onGoogleSetup?: string | null 
   )
 }
 
+function WebhookSection() {
+  const [copied, setCopied] = useState(false)
+
+  const { data } = useQuery({
+    queryKey: ['webhook-info'],
+    queryFn: () => api<{ url: string; tenantId: string; secret: string; example: unknown }>('/crm/webhook/info'),
+  })
+
+  const webhookUrl = data?.data?.url ?? ''
+
+  const copy = () => {
+    navigator.clipboard.writeText(webhookUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <section className="space-y-4">
+      <div>
+        <h2 className="text-sm font-semibold text-orf-text">Webhook Universal</h2>
+        <p className="text-xs text-orf-text-2 mt-0.5">Integre qualquer CRM, formulário ou plataforma via webhook. RD Station, Pipedrive, Nectar, Moskit e outros.</p>
+      </div>
+      <div className="bg-orf-surface border border-orf-border rounded-orf p-4 space-y-3">
+        <div>
+          <p className="text-xs font-medium text-orf-text-2 mb-1.5">URL do Webhook</p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 text-xs bg-orf-surface-2 px-3 py-2 rounded-orf-sm text-orf-text font-mono truncate border border-orf-border">
+              {webhookUrl || 'Carregando...'}
+            </code>
+            <button
+              onClick={copy}
+              className="px-3 py-2 bg-orf-primary text-white rounded-orf-sm text-xs font-medium hover:bg-orf-primary/90 whitespace-nowrap"
+            >
+              {copied ? '✓ Copiado' : 'Copiar'}
+            </button>
+          </div>
+        </div>
+        <div>
+          <p className="text-xs font-medium text-orf-text-2 mb-1.5">Campos aceitos no POST (JSON)</p>
+          <div className="bg-orf-surface-2 rounded-orf-sm px-3 py-2 text-xs text-orf-text-3 font-mono">
+            {`{ "event": "lead|qualified|won|lost", "name": "...", "email": "...", "phone": "...", "utmSource": "...", "gclid": "...", "value": 0, "mrr": 0 }`}
+          </div>
+        </div>
+        <p className="text-xs text-orf-text-3">
+          Use <strong className="text-orf-text-2">externalId</strong> para atualizar leads existentes via upsert.
+        </p>
+      </div>
+    </section>
+  )
+}
+
 export function IntegrationsView() {
   const queryClient = useQueryClient()
   const searchParams = useSearchParams()
@@ -509,6 +560,8 @@ export function IntegrationsView() {
   const [connectingMeta, setConnectingMeta] = useState(false)
   const [connectingGoogleAds, setConnectingGoogleAds] = useState(false)
   const [connectingHubSpot, setConnectingHubSpot] = useState(false)
+  const [mappingCrmId, setMappingCrmId] = useState<string | null>(null)
+  const [stageMapping, setStageMapping] = useState<Record<string, string>>({})
   const hasPreSelected = useRef(false)
 
   const { data: platformsData, isLoading: loadingPlatforms } = useQuery({
@@ -706,6 +759,30 @@ export function IntegrationsView() {
     },
     onError: (e: any) => setToast({ type: 'error', message: e.message ?? 'Erro ao sincronizar Google Ads' }),
   })
+
+  const { data: pipelineData } = useQuery({
+    queryKey: ['hubspot-pipeline', mappingCrmId],
+    queryFn: () => api<{ pipelines: { id: string; label: string; stages: { id: string; label: string }[] }[] }>(`/crm/hubspot/pipeline/${mappingCrmId}`),
+    enabled: !!mappingCrmId,
+  })
+
+  const { data: funnelData } = useQuery({
+    queryKey: ['funnel-stages'],
+    queryFn: () => api<{ id: string; name: string }[]>('/funnel/stages'),
+    enabled: !!mappingCrmId,
+  })
+
+  const saveMapping = useMutation({
+    mutationFn: () => api(`/crm/hubspot/mapping/${mappingCrmId}`, { method: 'PATCH', body: JSON.stringify({ funnelMapping: stageMapping }) }),
+    onSuccess: () => {
+      setToast({ type: 'success', message: 'Mapeamento salvo!' })
+      setMappingCrmId(null)
+    },
+    onError: (e: any) => setToast({ type: 'error', message: e.message ?? 'Erro ao salvar mapeamento' }),
+  })
+
+  const hsPipelines = pipelineData?.data?.pipelines ?? []
+  const funnelStages = funnelData?.data ?? []
 
   const syncHubSpot = useMutation({
     mutationFn: (id: string) => api(`/crm/hubspot/sync/${id}`, { method: 'POST', body: JSON.stringify({}) }),
@@ -919,13 +996,24 @@ export function IntegrationsView() {
                     {STATUS_LABELS[crm.status]}
                   </span>
                   {crm.platform === 'hubspot' && (
-                    <button
-                      onClick={() => syncHubSpot.mutate(crm.id)}
-                      disabled={syncHubSpot.isPending}
-                      className="text-xs text-orf-primary hover:text-orf-primary/80 transition-colors"
-                    >
-                      {syncHubSpot.isPending ? 'Sync...' : 'Sync'}
-                    </button>
+                    <>
+                      <button
+                        onClick={() => {
+                          setMappingCrmId(crm.id)
+                          setStageMapping((crm as any).funnelMapping ?? {})
+                        }}
+                        className="text-xs text-orf-text-2 hover:text-orf-text transition-colors"
+                      >
+                        Mapear Funil
+                      </button>
+                      <button
+                        onClick={() => syncHubSpot.mutate(crm.id)}
+                        disabled={syncHubSpot.isPending}
+                        className="text-xs text-orf-primary hover:text-orf-primary/80 transition-colors"
+                      >
+                        {syncHubSpot.isPending ? 'Sync...' : 'Sync'}
+                      </button>
+                    </>
                   )}
                   <button
                     onClick={() => deleteCrm.mutate(crm.id)}
@@ -942,6 +1030,9 @@ export function IntegrationsView() {
 
       {/* Google Sheets */}
       <GoogleSheetsSection onGoogleSetup={googleSetup} />
+
+      {/* Webhook CRM */}
+      <WebhookSection />
 
       {/* Modal: Seleção de contas Meta */}
       {showSelectionModal && (
@@ -1130,6 +1221,58 @@ export function IntegrationsView() {
                 className="flex-1 px-4 py-2 bg-orf-primary text-white rounded-orf-sm text-sm font-medium hover:bg-orf-primary/90 disabled:opacity-50 transition-colors"
               >
                 {addCrm.isPending ? 'Salvando...' : 'Conectar'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* HubSpot Pipeline Mapping Modal */}
+      {mappingCrmId && (
+        <Modal title="Mapear Etapas do HubSpot → Funil" onClose={() => setMappingCrmId(null)}>
+          <div className="space-y-4">
+            <p className="text-xs text-orf-text-2">
+              Associe as etapas do pipeline do HubSpot às etapas do seu funil. Quando um deal avançar no HubSpot, o lead será atualizado automaticamente.
+            </p>
+
+            {hsPipelines.length === 0 ? (
+              <div className="py-6 text-center text-sm text-orf-text-2">Carregando pipelines do HubSpot...</div>
+            ) : (
+              <div className="space-y-4 max-h-80 overflow-y-auto pr-1">
+                {hsPipelines.map((pipeline) => (
+                  <div key={pipeline.id}>
+                    <p className="text-xs font-semibold text-orf-text uppercase tracking-wide mb-2">{pipeline.label}</p>
+                    <div className="space-y-2">
+                      {pipeline.stages.map((stage) => (
+                        <div key={stage.id} className="flex items-center gap-3">
+                          <span className="text-xs text-orf-text-2 flex-1 truncate">{stage.label}</span>
+                          <span className="text-orf-text-3 text-xs">→</span>
+                          <select
+                            value={stageMapping[stage.id] ?? ''}
+                            onChange={(e) => setStageMapping((m) => ({ ...m, [stage.id]: e.target.value }))}
+                            className="w-40 px-2 py-1.5 bg-orf-surface-2 border border-orf-border rounded-orf-sm text-xs text-orf-text focus:outline-none focus:border-orf-primary"
+                          >
+                            <option value="">Sem mapeamento</option>
+                            {funnelStages.map((fs) => (
+                              <option key={fs.id} value={fs.id}>{fs.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <button onClick={() => setMappingCrmId(null)} className="flex-1 px-4 py-2 border border-orf-border rounded-orf-sm text-sm text-orf-text-2 hover:text-orf-text">Cancelar</button>
+              <button
+                onClick={() => saveMapping.mutate()}
+                disabled={saveMapping.isPending}
+                className="flex-1 px-4 py-2 bg-orf-primary text-white rounded-orf-sm text-sm font-medium hover:bg-orf-primary/90 disabled:opacity-50"
+              >
+                {saveMapping.isPending ? 'Salvando...' : 'Salvar Mapeamento'}
               </button>
             </div>
           </div>
