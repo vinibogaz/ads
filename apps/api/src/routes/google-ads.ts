@@ -319,7 +319,7 @@ export async function googleAdsRoutes(app: FastifyInstance) {
           platform: 'google',
           event: 'sale',
           status: 'error',
-          responsePayload: { gclid: body.gclid, ...body },
+          responsePayload: body as any,
           sentAt: new Date(),
         })
       }
