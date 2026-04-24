@@ -2,6 +2,11 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useQuery } from '@tanstack/react-query'
+import { api } from '@/lib/api'
+import { useClientStore } from '@/store/client'
+
+type Client = { id: string; name: string; color: string }
 
 const navItems = [
   {
@@ -10,6 +15,15 @@ const navItems = [
     icon: (
       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Relatório',
+    href: '/reports',
+    icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
       </svg>
     ),
   },
@@ -37,6 +51,15 @@ const navItems = [
     icon: (
       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Clientes',
+    href: '/clients',
+    icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
       </svg>
     ),
   },
@@ -93,6 +116,15 @@ const bottomNavItems = [
 
 export function Sidebar() {
   const pathname = usePathname()
+  const { selectedClientId, setSelectedClientId } = useClientStore()
+
+  const { data: clientsData } = useQuery({
+    queryKey: ['clients'],
+    queryFn: () => api<Client[]>('/clients'),
+    staleTime: 60_000,
+  })
+  const clients: Client[] = clientsData?.data ?? []
+  const selectedClient = clients.find((c) => c.id === selectedClientId) ?? null
 
   return (
     <aside className="w-56 bg-orf-surface border-r border-orf-border flex flex-col shrink-0">
@@ -105,6 +137,22 @@ export function Sidebar() {
           <span className="font-bold text-orf-text text-sm">Orffia Ads</span>
         </div>
       </div>
+
+      {/* Client selector */}
+      {clients.length > 0 && (
+        <div className="px-3 py-3 border-b border-orf-border">
+          <p className="text-xs text-orf-text-3 mb-1.5 px-1">Cliente ativo</p>
+          <select
+            value={selectedClientId ?? ''}
+            onChange={(e) => setSelectedClientId(e.target.value || null)}
+            className="w-full px-2.5 py-1.5 bg-orf-surface-2 border border-orf-border rounded-orf-sm text-xs text-orf-text focus:outline-none focus:border-orf-primary appearance-none cursor-pointer"
+            style={selectedClient ? { borderLeftColor: selectedClient.color, borderLeftWidth: 3 } : {}}
+          >
+            <option value="">Todos os clientes</option>
+            {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
@@ -152,7 +200,7 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="px-4 py-4 border-t border-orf-border">
-        <p className="text-xs text-orf-text-3">Orffia Ads v0.1.0</p>
+        <p className="text-xs text-orf-text-3">Orffia Ads v0.2.0</p>
       </div>
     </aside>
   )

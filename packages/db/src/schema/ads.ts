@@ -77,6 +77,25 @@ export const utmMediumEnum = pgEnum('utm_medium', [
   'other',
 ])
 
+// ─── Clients ─────────────────────────────────────────────────────────────────
+
+export const clients = pgTable(
+  'clients',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 255 }).notNull(),
+    description: text('description'),
+    color: varchar('color', { length: 7 }).notNull().default('#6366f1'),
+    logoUrl: text('logo_url'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index('clients_tenant_idx').on(t.tenantId)]
+)
+
 // ─── Ads Platform Integrations ───────────────────────────────────────────────
 
 export const adsPlatformIntegrations = pgTable(
@@ -86,6 +105,7 @@ export const adsPlatformIntegrations = pgTable(
     tenantId: uuid('tenant_id')
       .notNull()
       .references(() => tenants.id, { onDelete: 'cascade' }),
+    clientId: uuid('client_id').references(() => clients.id, { onDelete: 'set null' }),
     platform: adsPlatformEnum('platform').notNull(),
     name: varchar('name', { length: 255 }).notNull(),
     accountId: varchar('account_id', { length: 255 }),
@@ -130,6 +150,7 @@ export const budgets = pgTable(
     tenantId: uuid('tenant_id')
       .notNull()
       .references(() => tenants.id, { onDelete: 'cascade' }),
+    clientId: uuid('client_id').references(() => clients.id, { onDelete: 'set null' }),
     integrationId: uuid('integration_id').references(() => adsPlatformIntegrations.id, {
       onDelete: 'set null',
     }),
@@ -182,6 +203,7 @@ export const leads = pgTable(
     tenantId: uuid('tenant_id')
       .notNull()
       .references(() => tenants.id, { onDelete: 'cascade' }),
+    clientId: uuid('client_id').references(() => clients.id, { onDelete: 'set null' }),
     crmIntegrationId: uuid('crm_integration_id').references(() => crmIntegrations.id, {
       onDelete: 'set null',
     }),
@@ -308,7 +330,38 @@ export const utmEntries = pgTable(
   ]
 )
 
+// ─── Google Sheets Integrations ──────────────────────────────────────────────
+
+export const googleSheetsIntegrations = pgTable(
+  'google_sheets_integrations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    clientId: uuid('client_id').references(() => clients.id, { onDelete: 'set null' }),
+    name: varchar('name', { length: 255 }).notNull(),
+    spreadsheetId: varchar('spreadsheet_id', { length: 255 }).notNull(),
+    sheetName: varchar('sheet_name', { length: 255 }).notNull().default('Sheet1'),
+    fieldMapping: jsonb('field_mapping').notNull().default({}), // { lead_field: column_letter }
+    credentials: jsonb('credentials').notNull().default({}), // service account JSON
+    status: integrationStatusEnum('status').notNull().default('active'),
+    lastSyncAt: timestamp('last_sync_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index('google_sheets_tenant_idx').on(t.tenantId)]
+)
+
 // ─── Relations ────────────────────────────────────────────────────────────────
+
+export const clientsRelations = relations(clients, ({ one, many }) => ({
+  tenant: one(tenants, { fields: [clients.tenantId], references: [tenants.id] }),
+  integrations: many(adsPlatformIntegrations),
+  budgets: many(budgets),
+  leads: many(leads),
+  googleSheets: many(googleSheetsIntegrations),
+}))
 
 export const adsPlatformIntegrationsRelations = relations(
   adsPlatformIntegrations,
@@ -316,6 +369,10 @@ export const adsPlatformIntegrationsRelations = relations(
     tenant: one(tenants, {
       fields: [adsPlatformIntegrations.tenantId],
       references: [tenants.id],
+    }),
+    client: one(clients, {
+      fields: [adsPlatformIntegrations.clientId],
+      references: [clients.id],
     }),
     budgets: many(budgets),
     offlineConversions: many(offlineConversions),
@@ -330,6 +387,7 @@ export const crmIntegrationsRelations = relations(crmIntegrations, ({ one, many 
 
 export const budgetsRelations = relations(budgets, ({ one }) => ({
   tenant: one(tenants, { fields: [budgets.tenantId], references: [tenants.id] }),
+  client: one(clients, { fields: [budgets.clientId], references: [clients.id] }),
   integration: one(adsPlatformIntegrations, {
     fields: [budgets.integrationId],
     references: [adsPlatformIntegrations.id],
@@ -347,12 +405,18 @@ export const funnelStagesRelations = relations(funnelStages, ({ one, many }) => 
 
 export const leadsRelations = relations(leads, ({ one, many }) => ({
   tenant: one(tenants, { fields: [leads.tenantId], references: [tenants.id] }),
+  client: one(clients, { fields: [leads.clientId], references: [clients.id] }),
   crmIntegration: one(crmIntegrations, {
     fields: [leads.crmIntegrationId],
     references: [crmIntegrations.id],
   }),
   stage: one(funnelStages, { fields: [leads.stageId], references: [funnelStages.id] }),
   offlineConversions: many(offlineConversions),
+}))
+
+export const googleSheetsIntegrationsRelations = relations(googleSheetsIntegrations, ({ one }) => ({
+  tenant: one(tenants, { fields: [googleSheetsIntegrations.tenantId], references: [tenants.id] }),
+  client: one(clients, { fields: [googleSheetsIntegrations.clientId], references: [clients.id] }),
 }))
 
 export const offlineConversionsRelations = relations(offlineConversions, ({ one }) => ({

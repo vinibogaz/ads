@@ -1,29 +1,36 @@
 import type { FastifyInstance } from 'fastify'
-import { eq, and, sql, count } from 'drizzle-orm'
+import { eq, and, sql } from 'drizzle-orm'
 import { db, budgets, leads, offlineConversions, funnelStages, adsPlatformIntegrations, crmIntegrations } from '@ads/db'
 
 export async function dashboardRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticate)
 
-  // GET /api/v1/dashboard/summary?month=4&year=2026
+  // GET /api/v1/dashboard/summary?month=4&year=2026&clientId=xxx
   app.get('/summary', async (request, reply) => {
-    const query = request.query as { month?: string; year?: string }
+    const query = request.query as { month?: string; year?: string; clientId?: string }
     const now = new Date()
     const month = query.month ? parseInt(query.month) : now.getMonth() + 1
     const year = query.year ? parseInt(query.year) : now.getFullYear()
     const tid = request.user.tid
+    const clientId = query.clientId || null
+
+    const budgetWhere = clientId
+      ? and(eq(budgets.tenantId, tid), eq(budgets.month, month), eq(budgets.year, year), eq(budgets.clientId, clientId))
+      : and(eq(budgets.tenantId, tid), eq(budgets.month, month), eq(budgets.year, year))
+
+    const leadsWhere = clientId
+      ? and(eq(leads.tenantId, tid), eq(leads.clientId, clientId))
+      : eq(leads.tenantId, tid)
 
     const [budgetRows, leadRows, conversionRows, stageRows, platformCount, crmCount] =
       await Promise.all([
-        db.query.budgets.findMany({
-          where: and(eq(budgets.tenantId, tid), eq(budgets.month, month), eq(budgets.year, year)),
-        }),
+        db.query.budgets.findMany({ where: budgetWhere }),
         db.select({
           status: leads.status,
           count: sql<number>`count(*)::int`,
         })
           .from(leads)
-          .where(eq(leads.tenantId, tid))
+          .where(leadsWhere)
           .groupBy(leads.status),
         db.select({
           platform: offlineConversions.platform,
@@ -39,7 +46,7 @@ export async function dashboardRoutes(app: FastifyInstance) {
         })
           .from(leads)
           .leftJoin(funnelStages, eq(leads.stageId, funnelStages.id))
-          .where(eq(leads.tenantId, tid))
+          .where(leadsWhere)
           .groupBy(leads.stageId, funnelStages.name),
         db
           .select({ count: sql<number>`count(*)::int` })
@@ -58,24 +65,33 @@ export async function dashboardRoutes(app: FastifyInstance) {
     const wonLeads = leadRows.find((r) => r.status === 'won')?.count ?? 0
     const totalConversions = conversionRows.reduce((s, r) => s + r.count, 0)
 
-    // Fetch integration names for budget rows that have integrationId
+    // Fetch integrations for budget rows — get name + meta (impressions/clicks/CTR)
     const integrationIds = budgetRows.map((b) => b.integrationId).filter(Boolean) as string[]
     const integrationRows = integrationIds.length > 0
       ? await db.query.adsPlatformIntegrations.findMany({
           where: (t, { inArray }) => inArray(t.id, integrationIds),
-          columns: { id: true, name: true },
+          columns: { id: true, name: true, meta: true },
         })
       : []
-    const integrationMap = Object.fromEntries(integrationRows.map((i) => [i.id, i.name]))
+    const integrationMap = Object.fromEntries(integrationRows.map((i) => [i.id, i]))
+
+    // Aggregate metrics from all synced integrations
+    const totalImpressions = integrationRows.reduce((s, i) => s + ((i.meta as any)?.impressions ?? 0), 0)
+    const totalClicks = integrationRows.reduce((s, i) => s + ((i.meta as any)?.clicks ?? 0), 0)
+    const avgCtr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0
+    const avgCpm = totalSpent > 0 && totalImpressions > 0 ? (totalSpent / totalImpressions) * 1000 : 0
+    const cpl = totalLeads > 0 && totalSpent > 0 ? totalSpent / totalLeads : 0
 
     const budgetByPlatform = budgetRows.map((b) => {
       const planned = parseFloat(b.plannedAmount)
       const spent = parseFloat(b.spentAmount)
+      const integration = b.integrationId ? integrationMap[b.integrationId] : null
+      const meta = (integration?.meta as any) ?? {}
       return {
         id: b.id,
         platform: b.platform,
         integrationId: b.integrationId ?? null,
-        integrationName: b.integrationId ? (integrationMap[b.integrationId] ?? null) : null,
+        integrationName: integration?.name ?? null,
         plannedAmount: planned,
         spentAmount: spent,
         remainingAmount: planned - spent,
@@ -83,6 +99,12 @@ export async function dashboardRoutes(app: FastifyInstance) {
         currency: b.currency,
         month,
         year,
+        impressions: meta.impressions ?? 0,
+        clicks: meta.clicks ?? 0,
+        ctr: meta.ctr ?? 0,
+        cpm: meta.cpm ?? 0,
+        leads: meta.leads ?? 0,
+        cpl: meta.cpl ?? 0,
       }
     })
 
@@ -95,6 +117,11 @@ export async function dashboardRoutes(app: FastifyInstance) {
         totalQualifiedLeads: qualifiedLeads,
         totalWon: wonLeads,
         totalConversionsSent: totalConversions,
+        totalImpressions,
+        totalClicks,
+        avgCtr: Math.round(avgCtr * 100) / 100,
+        avgCpm: Math.round(avgCpm * 100) / 100,
+        cpl: Math.round(cpl * 100) / 100,
         activePlatforms: platformCount[0]?.count ?? 0,
         activeCrms: crmCount[0]?.count ?? 0,
         conversionsByPlatform: conversionRows.map((r) => ({ platform: r.platform, count: r.count })),

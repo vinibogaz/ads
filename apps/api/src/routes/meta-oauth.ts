@@ -190,7 +190,7 @@ export async function metaOAuthRoutes(app: FastifyInstance) {
 
     // Build URL properly to avoid encoding issues
     const insightsUrl = new URL(`${META_GRAPH_URL}/${integration.accountId}/insights`)
-    insightsUrl.searchParams.set('fields', 'spend,impressions,clicks,actions')
+    insightsUrl.searchParams.set('fields', 'spend,impressions,clicks,reach,frequency,cpm,cpc,ctr,actions')
     insightsUrl.searchParams.set('time_range', JSON.stringify({ since: sinceDate, until: untilDate }))
     insightsUrl.searchParams.set('access_token', creds.accessToken)
 
@@ -201,14 +201,48 @@ export async function metaOAuthRoutes(app: FastifyInstance) {
       return reply.status(502).send({ error: 'INSIGHTS_FAILED', message: 'Failed to fetch insights from Meta' })
     }
 
-    const insightsData = await insightsRes.json() as { data: { spend: string; actions?: { action_type: string; value: string }[] }[] }
+    const insightsData = await insightsRes.json() as {
+      data: {
+        spend: string
+        impressions?: string
+        clicks?: string
+        reach?: string
+        frequency?: string
+        cpm?: string
+        cpc?: string
+        ctr?: string
+        actions?: { action_type: string; value: string }[]
+      }[]
+    }
     const insights = insightsData.data?.[0]
     const spend = parseFloat(insights?.spend ?? '0')
-    const leads = (insights?.actions?.filter((a) => a.action_type === 'lead') ?? [])
+    const impressions = parseInt(insights?.impressions ?? '0')
+    const clicks = parseInt(insights?.clicks ?? '0')
+    const reach = parseInt(insights?.reach ?? '0')
+    const ctr = parseFloat(insights?.ctr ?? '0')
+    const cpm = parseFloat(insights?.cpm ?? '0')
+    const cpc = parseFloat(insights?.cpc ?? '0')
+    const leadsCount = (insights?.actions?.filter((a) => a.action_type === 'lead') ?? [])
       .reduce((sum, a) => sum + parseInt(a.value ?? '0'), 0)
+    const cpl = leadsCount > 0 ? spend / leadsCount : 0
 
     await db.update(adsPlatformIntegrations)
-      .set({ lastSyncAt: new Date(), updatedAt: new Date() })
+      .set({
+        lastSyncAt: new Date(),
+        updatedAt: new Date(),
+        meta: {
+          ...(integration.meta as object ?? {}),
+          impressions,
+          clicks,
+          reach,
+          ctr: Math.round(ctr * 100) / 100,
+          cpm: Math.round(cpm * 100) / 100,
+          cpc: Math.round(cpc * 100) / 100,
+          leads: leadsCount,
+          cpl: Math.round(cpl * 100) / 100,
+          lastSyncPeriod: `${sinceDate} - ${untilDate}`,
+        },
+      })
       .where(eq(adsPlatformIntegrations.id, integrationId))
 
     // Update budget spentAmount for this integration/month
@@ -233,7 +267,14 @@ export async function metaOAuthRoutes(app: FastifyInstance) {
         name: integration.name,
         period: `${sinceDate} - ${untilDate}`,
         spend,
-        leads,
+        impressions,
+        clicks,
+        reach,
+        ctr,
+        cpm,
+        cpc,
+        leads: leadsCount,
+        cpl: Math.round(cpl * 100) / 100,
         budgetUpdated: !!budgetRow,
       }
     })

@@ -20,6 +20,9 @@ import { adsIntegrationsRoutes } from './routes/ads-integrations.js'
 import { dashboardRoutes } from './routes/dashboard.js'
 import { conversionsRoutes } from './routes/conversions.js'
 import { metaOAuthRoutes } from './routes/meta-oauth.js'
+import { clientsRoutes } from './routes/clients.js'
+import { reportsRoutes } from './routes/reports.js'
+import { googleSheetsRoutes } from './routes/google-sheets.js'
 import { env } from './config/env.js'
 
 const app = Fastify({
@@ -65,6 +68,9 @@ await app.register(adsIntegrationsRoutes, { prefix: '/api/v1/ads-integrations' }
 await app.register(dashboardRoutes, { prefix: '/api/v1/dashboard' })
 await app.register(conversionsRoutes, { prefix: '/api/v1/conversions' })
 await app.register(metaOAuthRoutes, { prefix: '/api/v1/auth' })
+await app.register(clientsRoutes, { prefix: '/api/v1/clients' })
+await app.register(reportsRoutes, { prefix: '/api/v1/reports' })
+await app.register(googleSheetsRoutes, { prefix: '/api/v1/google-sheets' })
 
 // Global error handler
 app.setErrorHandler((error, request, reply) => {

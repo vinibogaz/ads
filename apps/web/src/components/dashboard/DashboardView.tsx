@@ -1,8 +1,9 @@
 'use client'
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api } from '@/lib/api'
+import { useClientStore } from '@/store/client'
 import type { AdsPlatform, AdsPlatformIntegration } from '@ads/shared'
 
 const PLATFORM_LABELS: Record<AdsPlatform, string> = {
@@ -25,6 +26,12 @@ type BudgetAccount = {
   remainingAmount: number
   percentUsed: number
   currency: string
+  impressions: number
+  clicks: number
+  ctr: number
+  cpm: number
+  leads: number
+  cpl: number
 }
 
 type DashboardData = {
@@ -35,6 +42,11 @@ type DashboardData = {
   totalQualifiedLeads: number
   totalWon: number
   totalConversionsSent: number
+  totalImpressions: number
+  totalClicks: number
+  avgCtr: number
+  avgCpm: number
+  cpl: number
   activePlatforms: number
   activeCrms: number
   conversionsByPlatform: { platform: AdsPlatform; count: number }[]
@@ -49,13 +61,13 @@ function KPI({ label, value, sub, color }: { label: string; value: string; sub?:
   return (
     <div className="bg-orf-surface border border-orf-border rounded-orf p-4">
       <p className="text-xs text-orf-text-2 uppercase tracking-wide font-medium">{label}</p>
-      <p className={`text-2xl font-bold mt-1 ${color ?? 'text-orf-text'}`}>{value}</p>
+      <p className={`text-xl font-bold mt-1 ${color ?? 'text-orf-text'}`}>{value}</p>
       {sub && <p className="text-xs text-orf-text-3 mt-0.5">{sub}</p>}
     </div>
   )
 }
 
-function ProgressBar({ pct, warn }: { pct: number; warn?: boolean }) {
+function ProgressBar({ pct }: { pct: number }) {
   const color = pct > 90 ? 'bg-red-500' : pct > 70 ? 'bg-yellow-500' : 'bg-orf-primary'
   return (
     <div className="h-1.5 bg-orf-surface-2 rounded-full overflow-hidden">
@@ -73,30 +85,37 @@ export function DashboardView() {
   const [year, setYear] = useState(now.getFullYear())
   const [syncingId, setSyncingId] = useState<string | null>(null)
   const [syncMsg, setSyncMsg] = useState<string | null>(null)
+  const { selectedClientId } = useClientStore()
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['dashboard-summary', month, year],
-    queryFn: () => api<DashboardData>(`/dashboard/summary?month=${month}&year=${year}`),
+    queryKey: ['dashboard-summary', month, year, selectedClientId],
+    queryFn: () => {
+      const params = new URLSearchParams({ month: String(month), year: String(year) })
+      if (selectedClientId) params.set('clientId', selectedClientId)
+      return api<DashboardData>(`/dashboard/summary?${params}`)
+    },
   })
 
   const { data: intData } = useQuery({
-    queryKey: ['ads-platforms'],
-    queryFn: () => api<AdsPlatformIntegration[]>('/ads-integrations/platforms'),
+    queryKey: ['ads-platforms', selectedClientId],
+    queryFn: () => {
+      const params = selectedClientId ? `?clientId=${selectedClientId}` : ''
+      return api<AdsPlatformIntegration[]>(`/ads-integrations/platforms${params}`)
+    },
   })
 
   const d = data?.data
   const integrations = (intData?.data ?? []).filter((i) => i.status === 'active' && i.platform === 'meta')
 
-  // Sync a single Meta account
   const syncAccount = async (integrationId: string) => {
     setSyncingId(integrationId)
     setSyncMsg(null)
     try {
-      const res = await api<{ spend: number; leads: number; budgetUpdated: boolean }>(`/auth/meta/sync/${integrationId}`)
+      const res = await api<{ spend: number; leads: number; impressions: number; clicks: number; ctr: number; budgetUpdated: boolean }>(`/auth/meta/sync/${integrationId}`)
       queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] })
       queryClient.invalidateQueries({ queryKey: ['budget'] })
-      const { spend, leads, budgetUpdated } = res.data
-      setSyncMsg(`✓ Gasto: ${fmt(spend)} · Leads: ${leads}${budgetUpdated ? ' · Budget atualizado' : ''}`)
+      const { spend, leads, impressions, clicks, ctr, budgetUpdated } = res.data
+      setSyncMsg(`✓ Gasto: ${fmt(spend)} · Leads: ${leads} · ${fmtN(impressions)} impressões · ${fmtN(clicks)} cliques · CTR: ${ctr}%${budgetUpdated ? ' · Budget atualizado' : ''}`)
     } catch (e: any) {
       setSyncMsg(`Erro: ${e.message}`)
     } finally {
@@ -104,12 +123,9 @@ export function DashboardView() {
     }
   }
 
-  // Sync all Meta accounts
   const syncAll = async () => {
     setSyncMsg(null)
-    for (const i of integrations) {
-      await syncAccount(i.id)
-    }
+    for (const i of integrations) await syncAccount(i.id)
     refetch()
   }
 
@@ -118,12 +134,9 @@ export function DashboardView() {
   const totalRemaining = totalPlanned - totalSpent
   const totalPct = totalPlanned > 0 ? Math.round((totalSpent / totalPlanned) * 100) : 0
   const totalLeads = d?.totalLeads ?? 0
-  const cpl = totalLeads > 0 && totalSpent > 0 ? totalSpent / totalLeads : 0
   const monthLabel = `${MONTHS[month - 1]} ${year}`
 
-  if (isLoading) {
-    return <div className="flex items-center justify-center h-64 text-orf-text-2 text-sm">Carregando...</div>
-  }
+  if (isLoading) return <div className="flex items-center justify-center h-64 text-orf-text-2 text-sm">Carregando...</div>
 
   return (
     <div className="space-y-6">
@@ -160,33 +173,25 @@ export function DashboardView() {
         </div>
       )}
 
-      {/* KPIs principais */}
+      {/* KPIs - row 1: budget + leads */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KPI
-          label="Budget Planejado"
-          value={fmt(totalPlanned)}
-          sub={`${totalPct}% utilizado`}
-        />
-        <KPI
-          label="Budget Gasto"
-          value={fmt(totalSpent)}
-          sub={`Saldo: ${fmt(totalRemaining)}`}
-          color={totalSpent > totalPlanned ? 'text-red-400' : 'text-orf-text'}
-        />
-        <KPI
-          label="Total de Leads"
-          value={fmtN(totalLeads)}
-          sub={`${d?.totalQualifiedLeads ?? 0} qualificados · ${d?.totalWon ?? 0} fechados`}
-          color="text-orf-primary"
-        />
-        <KPI
-          label="CPL Médio"
-          value={cpl > 0 ? fmt(cpl) : '—'}
-          sub="Custo por lead"
-        />
+        <KPI label="Budget Planejado" value={fmt(totalPlanned)} sub={`${totalPct}% utilizado`} />
+        <KPI label="Budget Gasto" value={fmt(totalSpent)} sub={`Saldo: ${fmt(totalRemaining)}`} color={totalSpent > totalPlanned ? 'text-red-400' : 'text-orf-text'} />
+        <KPI label="Total de Leads" value={fmtN(totalLeads)} sub={`${d?.totalQualifiedLeads ?? 0} qualificados · ${d?.totalWon ?? 0} fechados`} color="text-orf-primary" />
+        <KPI label="CPL Médio" value={(d?.cpl ?? 0) > 0 ? fmt(d!.cpl) : '—'} sub="Custo por lead" />
       </div>
 
-      {/* Budget por conta (tabela) */}
+      {/* KPIs - row 2: tráfego */}
+      {((d?.totalImpressions ?? 0) > 0 || (d?.totalClicks ?? 0) > 0) && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <KPI label="Impressões" value={fmtN(d?.totalImpressions ?? 0)} sub="Total do período" />
+          <KPI label="Cliques" value={fmtN(d?.totalClicks ?? 0)} sub="Total do período" />
+          <KPI label="CTR Médio" value={(d?.avgCtr ?? 0) > 0 ? `${d!.avgCtr}%` : '—'} sub="Taxa de clique" />
+          <KPI label="CPM Médio" value={(d?.avgCpm ?? 0) > 0 ? fmt(d!.avgCpm) : '—'} sub="Custo por mil impressões" />
+        </div>
+      )}
+
+      {/* Budget por conta */}
       {(d?.budgetByPlatform?.length ?? 0) > 0 && (
         <div className="bg-orf-surface border border-orf-border rounded-orf">
           <div className="px-5 py-4 border-b border-orf-border flex items-center justify-between">
@@ -194,52 +199,59 @@ export function DashboardView() {
             <span className="text-xs text-orf-text-3">{monthLabel}</span>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-orf-border">
-                  <th className="text-left px-5 py-2.5 text-xs text-orf-text-2 font-medium">Conta</th>
-                  <th className="text-right px-4 py-2.5 text-xs text-orf-text-2 font-medium">Planejado</th>
-                  <th className="text-right px-4 py-2.5 text-xs text-orf-text-2 font-medium">Gasto</th>
-                  <th className="text-right px-4 py-2.5 text-xs text-orf-text-2 font-medium">Saldo</th>
-                  <th className="px-4 py-2.5 text-xs text-orf-text-2 font-medium w-32">Progresso</th>
-                  <th className="text-right px-5 py-2.5 text-xs text-orf-text-2 font-medium">%</th>
+                <tr className="border-b border-orf-border text-orf-text-2">
+                  <th className="text-left px-5 py-2.5 font-medium">Conta</th>
+                  <th className="text-right px-4 py-2.5 font-medium">Planejado</th>
+                  <th className="text-right px-4 py-2.5 font-medium">Gasto</th>
+                  <th className="text-right px-4 py-2.5 font-medium">Saldo</th>
+                  <th className="text-right px-4 py-2.5 font-medium">Impressões</th>
+                  <th className="text-right px-4 py-2.5 font-medium">Cliques</th>
+                  <th className="text-right px-4 py-2.5 font-medium">CTR</th>
+                  <th className="text-right px-4 py-2.5 font-medium">CPM</th>
+                  <th className="px-4 py-2.5 font-medium w-28">Progresso</th>
+                  <th className="text-right px-5 py-2.5 font-medium">%</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-orf-border">
                 {d!.budgetByPlatform.map((b) => (
-                  <tr key={b.id} className="hover:bg-orf-surface-2/30 transition-colors">
+                  <tr key={b.id} className="hover:bg-orf-surface-2/30">
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2">
                         <span className={`w-2 h-2 rounded-full shrink-0 ${PLATFORM_COLORS[b.platform]}`} />
                         <div>
-                          <p className="text-orf-text font-medium text-xs">{b.integrationName ?? PLATFORM_LABELS[b.platform]}</p>
-                          {b.integrationName && <p className="text-orf-text-3 text-xs">{PLATFORM_LABELS[b.platform]}</p>}
+                          <p className="text-orf-text font-medium">{b.integrationName ?? PLATFORM_LABELS[b.platform]}</p>
+                          {b.integrationName && <p className="text-orf-text-3">{PLATFORM_LABELS[b.platform]}</p>}
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right text-orf-text text-xs">{fmt(b.plannedAmount)}</td>
-                    <td className="px-4 py-3 text-right text-xs">
+                    <td className="px-4 py-3 text-right text-orf-text">{fmt(b.plannedAmount)}</td>
+                    <td className="px-4 py-3 text-right">
                       <span className={b.spentAmount > b.plannedAmount ? 'text-red-400' : 'text-orf-text'}>{fmt(b.spentAmount)}</span>
                     </td>
-                    <td className="px-4 py-3 text-right text-xs">
+                    <td className="px-4 py-3 text-right">
                       <span className={b.remainingAmount < 0 ? 'text-red-400' : 'text-emerald-400'}>{fmt(b.remainingAmount)}</span>
                     </td>
-                    <td className="px-4 py-3 w-32">
-                      <ProgressBar pct={b.percentUsed} />
-                    </td>
-                    <td className="px-5 py-3 text-right text-xs font-medium text-orf-text-2">{b.percentUsed}%</td>
+                    <td className="px-4 py-3 text-right text-orf-text-2">{b.impressions > 0 ? fmtN(b.impressions) : '—'}</td>
+                    <td className="px-4 py-3 text-right text-orf-text-2">{b.clicks > 0 ? fmtN(b.clicks) : '—'}</td>
+                    <td className="px-4 py-3 text-right text-orf-text-2">{b.ctr > 0 ? `${b.ctr}%` : '—'}</td>
+                    <td className="px-4 py-3 text-right text-orf-text-2">{b.cpm > 0 ? fmt(b.cpm) : '—'}</td>
+                    <td className="px-4 py-3 w-28"><ProgressBar pct={b.percentUsed} /></td>
+                    <td className="px-5 py-3 text-right font-medium text-orf-text-2">{b.percentUsed}%</td>
                   </tr>
                 ))}
-                {/* Totais */}
                 <tr className="bg-orf-surface-2/30 font-semibold">
-                  <td className="px-5 py-3 text-xs text-orf-text">Total</td>
-                  <td className="px-4 py-3 text-right text-xs text-orf-text">{fmt(totalPlanned)}</td>
-                  <td className="px-4 py-3 text-right text-xs text-orf-text">{fmt(totalSpent)}</td>
-                  <td className="px-4 py-3 text-right text-xs">
-                    <span className={totalRemaining < 0 ? 'text-red-400' : 'text-emerald-400'}>{fmt(totalRemaining)}</span>
-                  </td>
-                  <td className="px-4 py-3 w-32"><ProgressBar pct={totalPct} /></td>
-                  <td className="px-5 py-3 text-right text-xs text-orf-text">{totalPct}%</td>
+                  <td className="px-5 py-3 text-orf-text">Total</td>
+                  <td className="px-4 py-3 text-right text-orf-text">{fmt(totalPlanned)}</td>
+                  <td className="px-4 py-3 text-right text-orf-text">{fmt(totalSpent)}</td>
+                  <td className="px-4 py-3 text-right"><span className={totalRemaining < 0 ? 'text-red-400' : 'text-emerald-400'}>{fmt(totalRemaining)}</span></td>
+                  <td className="px-4 py-3 text-right text-orf-text-2">{(d?.totalImpressions ?? 0) > 0 ? fmtN(d!.totalImpressions) : '—'}</td>
+                  <td className="px-4 py-3 text-right text-orf-text-2">{(d?.totalClicks ?? 0) > 0 ? fmtN(d!.totalClicks) : '—'}</td>
+                  <td className="px-4 py-3 text-right text-orf-text-2">{(d?.avgCtr ?? 0) > 0 ? `${d!.avgCtr}%` : '—'}</td>
+                  <td className="px-4 py-3 text-right text-orf-text-2">{(d?.avgCpm ?? 0) > 0 ? fmt(d!.avgCpm) : '—'}</td>
+                  <td className="px-4 py-3 w-28"><ProgressBar pct={totalPct} /></td>
+                  <td className="px-5 py-3 text-right text-orf-text">{totalPct}%</td>
                 </tr>
               </tbody>
             </table>
@@ -247,7 +259,7 @@ export function DashboardView() {
         </div>
       )}
 
-      {/* Contas Meta com sync individual */}
+      {/* Contas Meta — sync individual */}
       {integrations.length > 0 && (
         <div className="bg-orf-surface border border-orf-border rounded-orf">
           <div className="px-5 py-4 border-b border-orf-border">
@@ -283,7 +295,7 @@ export function DashboardView() {
             <h2 className="text-sm font-semibold text-orf-text">Leads por Etapa</h2>
           </div>
           {!d?.leadsByStage?.length ? (
-            <div className="px-5 py-8 text-center text-sm text-orf-text-2">Configure o funil para visualizar aqui.</div>
+            <div className="px-5 py-8 text-center text-sm text-orf-text-2">Configure o funil para visualizar.</div>
           ) : (
             <div className="divide-y divide-orf-border">
               {d.leadsByStage.map((s) => {
@@ -300,44 +312,27 @@ export function DashboardView() {
           )}
         </div>
 
-        {/* Stats rápidos */}
+        {/* Métricas do Mês */}
         <div className="bg-orf-surface border border-orf-border rounded-orf">
           <div className="px-5 py-4 border-b border-orf-border">
             <h2 className="text-sm font-semibold text-orf-text">Métricas do Mês</h2>
           </div>
-          <div className="px-5 py-4 space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-orf-text-2">Taxa de qualificação</span>
-              <span className="text-sm font-semibold text-orf-text">
-                {totalLeads > 0 ? `${Math.round(((d?.totalQualifiedLeads ?? 0) / totalLeads) * 100)}%` : '—'}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-orf-text-2">Taxa de fechamento</span>
-              <span className="text-sm font-semibold text-orf-text">
-                {(d?.totalQualifiedLeads ?? 0) > 0 ? `${Math.round(((d?.totalWon ?? 0) / d!.totalQualifiedLeads) * 100)}%` : '—'}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-orf-text-2">Vendas fechadas</span>
-              <span className="text-sm font-semibold text-emerald-400">{d?.totalWon ?? 0}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-orf-text-2">Conv. offline enviadas</span>
-              <span className="text-sm font-semibold text-orf-text">{d?.totalConversionsSent ?? 0}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-orf-text-2">Utilização do budget</span>
-              <span className={`text-sm font-semibold ${totalPct > 90 ? 'text-red-400' : totalPct > 70 ? 'text-yellow-400' : 'text-orf-text'}`}>
-                {totalPct}%
-              </span>
-            </div>
-            {cpl > 0 && (
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-orf-text-2">CPL médio</span>
-                <span className="text-sm font-semibold text-orf-text">{fmt(cpl)}</span>
+          <div className="px-5 py-4 space-y-3.5">
+            {[
+              ['Taxa de qualificação', totalLeads > 0 ? `${Math.round(((d?.totalQualifiedLeads ?? 0) / totalLeads) * 100)}%` : '—'],
+              ['Taxa de fechamento', (d?.totalQualifiedLeads ?? 0) > 0 ? `${Math.round(((d?.totalWon ?? 0) / d!.totalQualifiedLeads) * 100)}%` : '—'],
+              ['Vendas fechadas', String(d?.totalWon ?? 0), 'text-emerald-400'],
+              ['Conv. offline enviadas', String(d?.totalConversionsSent ?? 0)],
+              ['Utilização do budget', `${totalPct}%`, totalPct > 90 ? 'text-red-400' : totalPct > 70 ? 'text-yellow-400' : undefined],
+              ...(((d?.cpl ?? 0) > 0) ? [['CPL médio', fmt(d!.cpl)]] : []),
+              ...(((d?.avgCtr ?? 0) > 0) ? [['CTR médio', `${d!.avgCtr}%`]] : []),
+              ...(((d?.avgCpm ?? 0) > 0) ? [['CPM médio', fmt(d!.avgCpm)]] : []),
+            ].map(([label, value, color]) => (
+              <div key={label} className="flex justify-between items-center">
+                <span className="text-sm text-orf-text-2">{label}</span>
+                <span className={`text-sm font-semibold ${color ?? 'text-orf-text'}`}>{value}</span>
               </div>
-            )}
+            ))}
           </div>
         </div>
       </div>

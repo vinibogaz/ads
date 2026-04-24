@@ -65,6 +65,161 @@ function MetaIcon() {
   )
 }
 
+type GSheet = { id: string; name: string; spreadsheetId: string; sheetName: string; status: string; lastSyncAt?: string; clientId?: string }
+
+const DEFAULT_FIELD_MAPPING = { name: 'A', email: 'B', phone: 'C', company: 'D', status: 'E', utmSource: 'F', utmMedium: 'G', utmCampaign: 'H', createdAt: 'I' }
+
+function GoogleSheetsSection() {
+  const queryClient = useQueryClient()
+  const [showModal, setShowModal] = useState(false)
+  const [form, setForm] = useState({ name: '', spreadsheetId: '', sheetName: 'Sheet1', serviceAccountJson: '' })
+  const [error, setError] = useState('')
+  const [syncingId, setSyncingId] = useState<string | null>(null)
+  const [syncMsg, setSyncMsg] = useState<string | null>(null)
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['google-sheets'],
+    queryFn: () => api<GSheet[]>('/google-sheets'),
+  })
+  const sheets: GSheet[] = data?.data ?? []
+
+  const add = useMutation({
+    mutationFn: () => api('/google-sheets', {
+      method: 'POST',
+      body: JSON.stringify({ ...form, fieldMapping: DEFAULT_FIELD_MAPPING }),
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['google-sheets'] })
+      setShowModal(false)
+      setForm({ name: '', spreadsheetId: '', sheetName: 'Sheet1', serviceAccountJson: '' })
+      setError('')
+    },
+    onError: (e: any) => setError(e.message ?? 'Erro ao conectar'),
+  })
+
+  const remove = useMutation({
+    mutationFn: (id: string) => api(`/google-sheets/${id}`, { method: 'DELETE' }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['google-sheets'] }),
+  })
+
+  const sync = async (id: string) => {
+    setSyncingId(id)
+    setSyncMsg(null)
+    try {
+      const res = await api<{ synced: number }>(`/google-sheets/${id}/sync`, { method: 'POST' })
+      setSyncMsg(`✓ ${res.data.synced} leads sincronizados`)
+    } catch (e: any) {
+      setSyncMsg(`Erro: ${e.message}`)
+    } finally {
+      setSyncingId(null)
+    }
+  }
+
+  return (
+    <section className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-semibold text-orf-text">Google Sheets</h2>
+          <p className="text-xs text-orf-text-3 mt-0.5">Exporte seus leads automaticamente para uma planilha</p>
+        </div>
+        <button
+          onClick={() => { setShowModal(true); setError('') }}
+          className="px-3 py-1.5 bg-orf-primary text-white rounded-orf-sm text-xs font-medium hover:bg-orf-primary/90 transition-colors"
+        >
+          + Conectar Planilha
+        </button>
+      </div>
+
+      {syncMsg && (
+        <div className={`text-xs px-3 py-2 rounded-orf-sm border ${syncMsg.startsWith('Erro') ? 'text-red-400 bg-red-500/10 border-red-500/20' : 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'}`}>
+          {syncMsg}
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="py-4 text-center text-sm text-orf-text-2">Carregando...</div>
+      ) : sheets.length === 0 ? (
+        <div className="bg-orf-surface border border-orf-border rounded-orf p-6 text-center">
+          <p className="text-sm text-orf-text-2">Nenhuma planilha conectada.</p>
+          <p className="text-xs text-orf-text-3 mt-1">Você precisará de uma conta de serviço do Google Cloud. <button onClick={() => setShowModal(true)} className="text-orf-primary hover:underline">Conectar agora</button></p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-4">
+          {sheets.map((s) => (
+            <div key={s.id} className="bg-orf-surface border border-orf-border rounded-orf p-4">
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <p className="text-sm font-medium text-orf-text">{s.name}</p>
+                  <p className="text-xs text-orf-text-3 mt-0.5">ID: {s.spreadsheetId.slice(0, 20)}...</p>
+                  <p className="text-xs text-orf-text-3">Aba: {s.sheetName}</p>
+                  {s.lastSyncAt && <p className="text-xs text-orf-text-3">Sync: {new Date(s.lastSyncAt).toLocaleString('pt-BR')}</p>}
+                </div>
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Ativo</span>
+              </div>
+              <div className="flex items-center gap-3 border-t border-orf-border pt-3">
+                <button
+                  onClick={() => sync(s.id)}
+                  disabled={syncingId === s.id}
+                  className="text-xs text-orf-primary hover:underline disabled:opacity-50"
+                >
+                  {syncingId === s.id ? 'Sincronizando...' : 'Sincronizar leads'}
+                </button>
+                <button onClick={() => remove.mutate(s.id)} className="text-xs text-red-400 hover:text-red-600">Remover</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showModal && (
+        <Modal title="Conectar Google Sheets" onClose={() => setShowModal(false)}>
+          <div className="space-y-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-orf-sm p-3 text-xs text-amber-700">
+              <strong>Pré-requisito:</strong> Crie uma conta de serviço no Google Cloud Console, baixe o JSON de credenciais e compartilhe a planilha com o e-mail da conta de serviço.
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-orf-text-2 mb-1.5">Nome da integração</label>
+              <input type="text" placeholder="Ex: Leads Cliente XYZ" value={form.name}
+                onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
+                className="w-full px-3 py-2 bg-orf-surface-2 border border-orf-border rounded-orf-sm text-sm text-orf-text placeholder:text-orf-text-3 focus:outline-none focus:border-orf-primary" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-orf-text-2 mb-1.5">ID da planilha</label>
+              <input type="text" placeholder="Ex: 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms" value={form.spreadsheetId}
+                onChange={(e) => setForm(f => ({ ...f, spreadsheetId: e.target.value }))}
+                className="w-full px-3 py-2 bg-orf-surface-2 border border-orf-border rounded-orf-sm text-sm text-orf-text placeholder:text-orf-text-3 focus:outline-none focus:border-orf-primary" />
+              <p className="text-xs text-orf-text-3 mt-1">Encontre na URL: sheets.google.com/spreadsheets/d/<strong>ID_AQUI</strong>/edit</p>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-orf-text-2 mb-1.5">Nome da aba</label>
+              <input type="text" placeholder="Sheet1" value={form.sheetName}
+                onChange={(e) => setForm(f => ({ ...f, sheetName: e.target.value }))}
+                className="w-full px-3 py-2 bg-orf-surface-2 border border-orf-border rounded-orf-sm text-sm text-orf-text placeholder:text-orf-text-3 focus:outline-none focus:border-orf-primary" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-orf-text-2 mb-1.5">JSON da Conta de Serviço</label>
+              <textarea rows={5} placeholder='{"type":"service_account","project_id":"...","private_key":"...","client_email":"..."}' value={form.serviceAccountJson}
+                onChange={(e) => setForm(f => ({ ...f, serviceAccountJson: e.target.value }))}
+                className="w-full px-3 py-2 bg-orf-surface-2 border border-orf-border rounded-orf-sm text-xs text-orf-text placeholder:text-orf-text-3 focus:outline-none focus:border-orf-primary font-mono resize-none" />
+            </div>
+            {error && <p className="text-xs text-red-500">{error}</p>}
+            <div className="flex gap-3 pt-1">
+              <button onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-orf-border rounded-orf-sm text-sm text-orf-text-2 hover:text-orf-text">Cancelar</button>
+              <button
+                onClick={() => add.mutate()}
+                disabled={!form.name || !form.spreadsheetId || !form.serviceAccountJson || add.isPending}
+                className="flex-1 px-4 py-2 bg-orf-primary text-white rounded-orf-sm text-sm font-medium hover:bg-orf-primary/90 disabled:opacity-50"
+              >
+                {add.isPending ? 'Conectando...' : 'Conectar'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </section>
+  )
+}
+
 export function IntegrationsView() {
   const queryClient = useQueryClient()
   const searchParams = useSearchParams()
@@ -361,6 +516,9 @@ export function IntegrationsView() {
           )}
         </div>
       </section>
+
+      {/* Google Sheets */}
+      <GoogleSheetsSection />
 
       {/* Modal: Seleção de contas Meta */}
       {showSelectionModal && (

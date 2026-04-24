@@ -7,6 +7,7 @@ const createAdsPlatformSchema = z.object({
   platform: z.enum(['meta', 'google', 'linkedin', 'tiktok', 'twitter', 'pinterest', 'taboola', 'other']),
   name: z.string().min(1).max(255),
   accountId: z.string().max(255).optional(),
+  clientId: z.string().uuid().optional(),
   credentials: z.record(z.unknown()).optional().default({}),
   meta: z.record(z.unknown()).optional().default({}),
 })
@@ -24,10 +25,14 @@ export async function adsIntegrationsRoutes(app: FastifyInstance) {
 
   // ── Ads Platforms ────────────────────────────────────────────────────────────
 
-  // GET /api/v1/ads-integrations/platforms
+  // GET /api/v1/ads-integrations/platforms?clientId=xxx
   app.get('/platforms', async (request, reply) => {
+    const { clientId } = request.query as { clientId?: string }
+    const where = clientId
+      ? and(eq(adsPlatformIntegrations.tenantId, request.user.tid), eq(adsPlatformIntegrations.clientId, clientId))
+      : eq(adsPlatformIntegrations.tenantId, request.user.tid)
     const rows = await db.query.adsPlatformIntegrations.findMany({
-      where: eq(adsPlatformIntegrations.tenantId, request.user.tid),
+      where,
       orderBy: (p, { asc }) => [asc(p.platform)],
     })
     return reply.send({ data: rows.map((r) => ({ ...r, credentials: undefined })) })
