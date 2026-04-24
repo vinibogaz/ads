@@ -90,10 +90,38 @@ export const clients = pgTable(
     description: text('description'),
     color: varchar('color', { length: 7 }).notNull().default('#6366f1'),
     logoUrl: text('logo_url'),
+    website: text('website'),
+    industry: varchar('industry', { length: 255 }),
+    phone: varchar('phone', { length: 50 }),
+    notes: text('notes'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [index('clients_tenant_idx').on(t.tenantId)]
+)
+
+// ─── UTM Dictionary ──────────────────────────────────────────────────────────
+
+export const utmDictionary = pgTable(
+  'utm_dictionary',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    utmParameter: varchar('utm_parameter', { length: 50 }).notNull(), // source|medium|campaign|content|term
+    utmValue: varchar('utm_value', { length: 255 }).notNull(),         // raw value (e.g. "promo_contabil")
+    label: varchar('label', { length: 255 }).notNull(),                // human label (e.g. "Escritório de Contabilidade")
+    segment: varchar('segment', { length: 255 }),                      // grouping (e.g. "Contabilidade")
+    color: varchar('color', { length: 7 }),
+    description: text('description'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    index('utm_dictionary_tenant_idx').on(t.tenantId),
+    index('utm_dictionary_lookup_idx').on(t.tenantId, t.utmParameter, t.utmValue),
+  ]
 )
 
 // ─── Ads Platform Integrations ───────────────────────────────────────────────
@@ -222,6 +250,11 @@ export const leads = pgTable(
     gclid: varchar('gclid', { length: 255 }),
     fbclid: varchar('fbclid', { length: 255 }),
     conversionSentAt: timestamp('conversion_sent_at', { withTimezone: true }),
+    // Revenue fields
+    value: numeric('value', { precision: 12, scale: 2 }),             // total deal value
+    mrr: numeric('mrr', { precision: 12, scale: 2 }),                 // monthly recurring revenue
+    implantation: numeric('implantation', { precision: 12, scale: 2 }), // one-time fee
+    closedAt: timestamp('closed_at', { withTimezone: true }),          // when deal was won
     meta: jsonb('meta').notNull().default({}),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -436,4 +469,8 @@ export const webhooksRelations = relations(webhooks, ({ one, many }) => ({
 
 export const webhookEventsRelations = relations(webhookEvents, ({ one }) => ({
   webhook: one(webhooks, { fields: [webhookEvents.webhookId], references: [webhooks.id] }),
+}))
+
+export const utmDictionaryRelations = relations(utmDictionary, ({ one }) => ({
+  tenant: one(tenants, { fields: [utmDictionary.tenantId], references: [tenants.id] }),
 }))

@@ -1,9 +1,12 @@
 import type { FastifyInstance } from 'fastify'
-import { eq, and, desc } from 'drizzle-orm'
-import { db, leads, funnelStages, offlineConversions } from '@ads/db'
+import { eq, and, desc, sql, isNotNull } from 'drizzle-orm'
+import { db, leads, funnelStages, offlineConversions, adsPlatformIntegrations } from '@ads/db'
 import { z } from 'zod'
 
+function toDecimal(v: number | undefined) { return v != null ? String(v) : undefined }
+
 const createLeadSchema = z.object({
+  clientId: z.string().uuid().optional(),
   crmIntegrationId: z.string().uuid().optional(),
   externalId: z.string().max(255).optional(),
   stageId: z.string().uuid().optional(),
@@ -19,6 +22,11 @@ const createLeadSchema = z.object({
   utmTerm: z.string().max(255).optional(),
   gclid: z.string().max(255).optional(),
   fbclid: z.string().max(255).optional(),
+  // Revenue fields
+  value: z.number().nonnegative().optional(),
+  mrr: z.number().nonnegative().optional(),
+  implantation: z.number().nonnegative().optional(),
+  closedAt: z.string().datetime().optional(),
   meta: z.record(z.unknown()).optional().default({}),
 })
 
@@ -72,13 +80,69 @@ export async function leadsRoutes(app: FastifyInstance) {
     return reply.send({ data: lead })
   })
 
+  // GET /api/v1/leads/metrics — aggregated KPIs
+  app.get('/metrics', async (request, reply) => {
+    const q = request.query as { clientId?: string; from?: string; to?: string }
+    const conditions = [eq(leads.tenantId, request.user.tid)]
+    if (q.clientId) conditions.push(eq(leads.clientId, q.clientId))
+    if (q.from) conditions.push(sql`${leads.createdAt} >= ${new Date(q.from)}`)
+    if (q.to) conditions.push(sql`${leads.createdAt} <= ${new Date(q.to)}`)
+
+    const rows = await db.query.leads.findMany({ where: and(...conditions) })
+
+    const total = rows.length
+    const paid = rows.filter(r => r.utmSource && r.utmSource !== 'organic' && r.utmSource !== 'direct' && r.utmSource !== '(direct)').length
+    const organic = total - paid
+
+    const wonLeads = rows.filter(r => r.status === 'won' && r.closedAt)
+    const withValue = wonLeads.filter(r => r.value != null)
+    const totalRevenue = withValue.reduce((s, r) => s + parseFloat(r.value!), 0)
+    const totalMrr = rows.filter(r => r.mrr != null).reduce((s, r) => s + parseFloat(r.mrr!), 0)
+    const ticketMedio = withValue.length > 0 ? totalRevenue / withValue.length : 0
+
+    const closingTimes = wonLeads
+      .filter(r => r.closedAt)
+      .map(r => (new Date(r.closedAt!).getTime() - new Date(r.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+    const avgClosingDays = closingTimes.length > 0
+      ? closingTimes.reduce((a, b) => a + b, 0) / closingTimes.length
+      : 0
+
+    const bySegment: Record<string, number> = {}
+    for (const r of rows) {
+      const seg = (r.meta as any)?.segment ?? r.utmCampaign ?? 'Outros'
+      bySegment[seg] = (bySegment[seg] ?? 0) + 1
+    }
+
+    return reply.send({
+      data: {
+        total, paid, organic,
+        paidPct: total > 0 ? Math.round(paid / total * 100 * 10) / 10 : 0,
+        organicPct: total > 0 ? Math.round(organic / total * 100 * 10) / 10 : 0,
+        won: wonLeads.length,
+        totalRevenue: Math.round(totalRevenue * 100) / 100,
+        totalMrr: Math.round(totalMrr * 100) / 100,
+        ticketMedio: Math.round(ticketMedio * 100) / 100,
+        avgClosingDays: Math.round(avgClosingDays * 10) / 10,
+        bySegment,
+      },
+    })
+  })
+
   // POST /api/v1/leads
   app.post('/', async (request, reply) => {
     const body = createLeadSchema.parse(request.body)
+    const { value, mrr, implantation, closedAt, ...rest } = body
 
     const [lead] = await db
       .insert(leads)
-      .values({ tenantId: request.user.tid, ...body })
+      .values({
+        tenantId: request.user.tid,
+        ...rest,
+        value: toDecimal(value),
+        mrr: toDecimal(mrr),
+        implantation: toDecimal(implantation),
+        closedAt: closedAt ? new Date(closedAt) : undefined,
+      })
       .returning()
 
     return reply.status(201).send({ data: lead })
@@ -92,14 +156,22 @@ export async function leadsRoutes(app: FastifyInstance) {
     const existing = await db.query.leads.findFirst({
       where: and(eq(leads.id, id), eq(leads.tenantId, request.user.tid)),
     })
-
     if (!existing) {
       return reply.status(404).send({ error: 'NOT_FOUND', message: 'Lead not found', statusCode: 404 })
     }
 
+    const { value, mrr, implantation, closedAt, ...rest } = body
+
     const [updated] = await db
       .update(leads)
-      .set({ ...body, updatedAt: new Date() })
+      .set({
+        ...rest,
+        value: toDecimal(value),
+        mrr: toDecimal(mrr),
+        implantation: toDecimal(implantation),
+        closedAt: closedAt ? new Date(closedAt) : undefined,
+        updatedAt: new Date(),
+      })
       .where(eq(leads.id, id))
       .returning()
 

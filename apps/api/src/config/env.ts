@@ -44,6 +44,11 @@ const envSchema = z.object({
   // Google Ads API
   GOOGLE_ADS_DEVELOPER_TOKEN: z.string().optional(),
   GOOGLE_ADS_REDIRECT_URI: z.string().optional().default('https://api-ads.orffia.com/api/v1/auth/google-ads/callback'),
+
+  // HubSpot CRM
+  HUBSPOT_CLIENT_ID: z.string().optional(),
+  HUBSPOT_CLIENT_SECRET: z.string().optional(),
+  HUBSPOT_REDIRECT_URI: z.string().optional().default('https://api-ads.orffia.com/api/v1/crm/hubspot/callback'),
 })
 
 const parsed = envSchema.safeParse(process.env)
