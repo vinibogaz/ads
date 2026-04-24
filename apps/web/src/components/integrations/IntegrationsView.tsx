@@ -70,6 +70,14 @@ type GSheet = {
   spreadsheetTitle?: string; googleEmail?: string; status: string; lastSyncAt?: string; clientId?: string
 }
 
+function HubSpotIcon() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M18.164 7.93V5.084a1.56 1.56 0 00.898-1.408V3.64a1.56 1.56 0 00-1.557-1.557h-.036A1.56 1.56 0 0015.912 3.64v.036a1.56 1.56 0 00.898 1.408V7.93a4.43 4.43 0 00-2.109.925L7.588 3.98a1.76 1.76 0 00.05-.4A1.764 1.764 0 005.874 1.816a1.764 1.764 0 00-1.765 1.764A1.764 1.764 0 005.874 5.344a1.75 1.75 0 00.87-.232l7.02 4.77a4.413 4.413 0 00-.659 2.332c0 .92.28 1.775.758 2.483l-2.129 2.129a1.505 1.505 0 00-.44-.072 1.528 1.528 0 00-1.528 1.528 1.528 1.528 0 001.528 1.528 1.528 1.528 0 001.528-1.528c0-.158-.026-.31-.072-.454l2.1-2.1A4.42 4.42 0 0017.505 16.6a4.432 4.432 0 004.432-4.432 4.433 4.433 0 00-3.773-4.238zm-.659 6.64a2.197 2.197 0 01-2.197-2.197 2.197 2.197 0 012.197-2.197 2.197 2.197 0 012.197 2.197 2.197 2.197 0 01-2.197 2.197z" />
+    </svg>
+  )
+}
+
 function GoogleAdsIcon() {
   return (
     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
@@ -500,6 +508,7 @@ export function IntegrationsView() {
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [connectingMeta, setConnectingMeta] = useState(false)
   const [connectingGoogleAds, setConnectingGoogleAds] = useState(false)
+  const [connectingHubSpot, setConnectingHubSpot] = useState(false)
   const hasPreSelected = useRef(false)
 
   const { data: platformsData, isLoading: loadingPlatforms } = useQuery({
@@ -549,6 +558,19 @@ export function IntegrationsView() {
     } else if (metaError === 'google_ads_state_invalid') {
       setToast({ type: 'error', message: 'Estado OAuth inválido. Tente conectar novamente.' })
       window.history.replaceState({}, '', '/integrations')
+    } else if (searchParams.get('hubspot_connected')) {
+      setToast({ type: 'success', message: 'HubSpot conectado com sucesso!' })
+      queryClient.invalidateQueries({ queryKey: ['crm-integrations'] })
+      window.history.replaceState({}, '', '/integrations')
+    } else if (metaError === 'hubspot_denied') {
+      setToast({ type: 'error', message: 'Autorização com HubSpot foi cancelada.' })
+      window.history.replaceState({}, '', '/integrations')
+    } else if (metaError === 'hubspot_token_failed') {
+      setToast({ type: 'error', message: 'Falha ao obter token do HubSpot. Tente novamente.' })
+      window.history.replaceState({}, '', '/integrations')
+    } else if (metaError === 'hubspot_state_invalid') {
+      setToast({ type: 'error', message: 'Estado OAuth inválido para HubSpot. Tente conectar novamente.' })
+      window.history.replaceState({}, '', '/integrations')
     }
   }, [searchParams, queryClient])
 
@@ -589,6 +611,17 @@ export function IntegrationsView() {
     } catch (e: any) {
       setToast({ type: 'error', message: e.message ?? 'Erro ao iniciar conexão com Meta' })
       setConnectingMeta(false)
+    }
+  }
+
+  const handleConnectHubSpot = async () => {
+    setConnectingHubSpot(true)
+    try {
+      const res = await api<{ url: string }>('/crm/hubspot/url')
+      window.location.href = res.data.url
+    } catch (e: any) {
+      setToast({ type: 'error', message: e.message ?? 'Erro ao iniciar conexão com HubSpot' })
+      setConnectingHubSpot(false)
     }
   }
 
@@ -668,6 +701,19 @@ export function IntegrationsView() {
     onError: (e: any) => setToast({ type: 'error', message: e.message ?? 'Erro ao sincronizar Google Ads' }),
   })
 
+  const syncHubSpot = useMutation({
+    mutationFn: (id: string) => api(`/crm/hubspot/sync/${id}`, { method: 'POST', body: JSON.stringify({}) }),
+    onSuccess: (res: any) => {
+      queryClient.invalidateQueries({ queryKey: ['crm-integrations'] })
+      const d = res?.data ?? {}
+      const parts: string[] = []
+      if (d.synced != null) parts.push(`${d.synced} sincronizados`)
+      if (d.updated != null) parts.push(`${d.updated} atualizados`)
+      setToast({ type: 'success', message: `HubSpot: ${parts.length > 0 ? parts.join(' · ') : 'sync concluído'}` })
+    },
+    onError: (e: any) => setToast({ type: 'error', message: e.message ?? 'Erro ao sincronizar HubSpot' }),
+  })
+
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev)
@@ -740,6 +786,28 @@ export function IntegrationsView() {
               className="px-4 py-2 bg-white border border-orf-border text-orf-text rounded-orf-sm text-xs font-medium hover:bg-orf-surface-2 disabled:opacity-60 transition-colors whitespace-nowrap flex items-center gap-2"
             >
               {connectingGoogleAds ? 'Redirecionando...' : '+ Conectar Google Ads'}
+            </button>
+          </div>
+
+          <div className="border-t border-orf-border" />
+
+          {/* HubSpot */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 flex-1">
+              <div className="w-10 h-10 rounded-orf-sm bg-[#ff7a59] flex items-center justify-center text-white shrink-0">
+                <HubSpotIcon />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-orf-text">HubSpot CRM</p>
+                <p className="text-xs text-orf-text-2">Sincronize contatos e deals — ticket médio, MRR e tempo de fechamento</p>
+              </div>
+            </div>
+            <button
+              onClick={handleConnectHubSpot}
+              disabled={connectingHubSpot}
+              className="px-4 py-2 bg-[#ff7a59] text-white rounded-orf-sm text-xs font-medium hover:bg-[#ff7a59]/90 disabled:opacity-60 transition-colors whitespace-nowrap"
+            >
+              {connectingHubSpot ? 'Redirecionando...' : 'Conectar HubSpot'}
             </button>
           </div>
         </div>
@@ -844,6 +912,15 @@ export function IntegrationsView() {
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLES[crm.status]}`}>
                     {STATUS_LABELS[crm.status]}
                   </span>
+                  {crm.platform === 'hubspot' && (
+                    <button
+                      onClick={() => syncHubSpot.mutate(crm.id)}
+                      disabled={syncHubSpot.isPending}
+                      className="text-xs text-orf-primary hover:text-orf-primary/80 transition-colors"
+                    >
+                      {syncHubSpot.isPending ? 'Sync...' : 'Sync'}
+                    </button>
+                  )}
                   <button
                     onClick={() => deleteCrm.mutate(crm.id)}
                     className="text-xs text-red-400 hover:text-red-600 transition-colors"
