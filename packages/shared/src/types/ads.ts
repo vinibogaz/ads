@@ -120,6 +120,10 @@ export interface Lead {
   gclid?: string
   fbclid?: string
   conversionSentAt?: string
+  value?: string | null
+  mrr?: string | null
+  implantation?: string | null
+  closedAt?: string | null
   meta: Record<string, unknown>
   createdAt: string
   updatedAt: string

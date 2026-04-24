@@ -6,6 +6,20 @@ import { api } from '@/lib/api'
 import { useClientStore } from '@/store/client'
 import type { AdsPlatform, AdsPlatformIntegration } from '@ads/shared'
 
+type LeadMetrics = {
+  total: number
+  paid: number
+  organic: number
+  paidPct: number
+  organicPct: number
+  won: number
+  totalRevenue: number
+  totalMrr: number
+  ticketMedio: number
+  avgClosingDays: number
+  bySegment: Record<string, number>
+}
+
 const PLATFORM_LABELS: Record<AdsPlatform, string> = {
   meta: 'Meta Ads', google: 'Google Ads', linkedin: 'LinkedIn Ads', tiktok: 'TikTok Ads',
   twitter: 'Twitter', pinterest: 'Pinterest', taboola: 'Taboola', other: 'Outro',
@@ -103,6 +117,19 @@ export function DashboardView() {
       return api<AdsPlatformIntegration[]>(`/ads-integrations/platforms${params}`)
     },
   })
+
+  const { data: leadMetricsData } = useQuery({
+    queryKey: ['lead-metrics', selectedClientId, month, year],
+    queryFn: () => {
+      const from = new Date(year, month - 1, 1).toISOString()
+      const to = new Date(year, month, 0, 23, 59, 59).toISOString()
+      const params = new URLSearchParams({ from, to })
+      if (selectedClientId) params.set('clientId', selectedClientId)
+      return api<LeadMetrics>(`/leads/metrics?${params}`)
+    },
+  })
+
+  const lm = leadMetricsData?.data
 
   const d = data?.data
   const integrations = (intData?.data ?? []).filter((i) => i.status === 'active' && i.platform === 'meta')
@@ -288,6 +315,68 @@ export function DashboardView() {
         </div>
       )}
 
+      {/* Revenue KPIs */}
+      {lm && (lm.totalRevenue > 0 || lm.totalMrr > 0 || lm.won > 0) && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <KPI
+            label="Receita Total"
+            value={lm.totalRevenue > 0 ? fmt(lm.totalRevenue) : '—'}
+            sub={`${lm.won} venda${lm.won !== 1 ? 's' : ''} fechada${lm.won !== 1 ? 's' : ''}`}
+            color="text-emerald-400"
+          />
+          <KPI
+            label="Ticket Médio"
+            value={lm.ticketMedio > 0 ? fmt(lm.ticketMedio) : '—'}
+            sub="Por venda fechada"
+          />
+          <KPI
+            label="MRR Total"
+            value={lm.totalMrr > 0 ? fmt(lm.totalMrr) : '—'}
+            sub="Receita recorrente mensal"
+          />
+          <KPI
+            label="Tempo Médio de Fechamento"
+            value={lm.avgClosingDays > 0 ? `${lm.avgClosingDays}d` : '—'}
+            sub="Da entrada até o fechamento"
+          />
+        </div>
+      )}
+
+      {/* Leads Pago vs Orgânico */}
+      {lm && lm.total > 0 && (
+        <div className="bg-orf-surface border border-orf-border rounded-orf">
+          <div className="px-5 py-4 border-b border-orf-border">
+            <h2 className="text-sm font-semibold text-orf-text">Leads — Pago vs Orgânico</h2>
+          </div>
+          <div className="px-5 py-4 grid grid-cols-2 gap-6">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-orf-text-2">Pago</span>
+                <span className="text-sm font-semibold text-orf-text">{lm.paid} <span className="text-orf-text-3 font-normal">({lm.paidPct}%)</span></span>
+              </div>
+              <div className="h-2 bg-orf-surface-2 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${lm.paidPct}%` }} />
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-orf-text-2">Orgânico</span>
+                <span className="text-sm font-semibold text-orf-text">{lm.organic} <span className="text-orf-text-3 font-normal">({lm.organicPct}%)</span></span>
+              </div>
+              <div className="h-2 bg-orf-surface-2 rounded-full overflow-hidden">
+                <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${lm.organicPct}%` }} />
+              </div>
+            </div>
+          </div>
+          {/* CPL for paid leads */}
+          {(d?.cpl ?? 0) > 0 && lm.paid > 0 && (
+            <div className="px-5 pb-4 flex gap-6">
+              <div className="text-xs text-orf-text-3">CPL (pago): <span className="text-orf-text font-semibold">{fmt(d!.cpl)}</span></div>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-6">
         {/* Leads por etapa */}
         <div className="bg-orf-surface border border-orf-border rounded-orf">
@@ -327,6 +416,9 @@ export function DashboardView() {
               ...(((d?.cpl ?? 0) > 0) ? [['CPL médio', fmt(d!.cpl)]] : []),
               ...(((d?.avgCtr ?? 0) > 0) ? [['CTR médio', `${d!.avgCtr}%`]] : []),
               ...(((d?.avgCpm ?? 0) > 0) ? [['CPM médio', fmt(d!.avgCpm)]] : []),
+              ...(lm && lm.ticketMedio > 0 ? [['Ticket médio', fmt(lm.ticketMedio), 'text-emerald-400']] : []),
+              ...(lm && lm.totalMrr > 0 ? [['MRR', fmt(lm.totalMrr)]] : []),
+              ...(lm && lm.avgClosingDays > 0 ? [['Tempo médio de fechamento', `${lm.avgClosingDays} dias`]] : []),
             ].map(([label, value, color]) => (
               <div key={label} className="flex justify-between items-center">
                 <span className="text-sm text-orf-text-2">{label}</span>
@@ -336,6 +428,34 @@ export function DashboardView() {
           </div>
         </div>
       </div>
+
+      {/* Leads por Segmento */}
+      {lm && Object.keys(lm.bySegment).length > 0 && (
+        <div className="bg-orf-surface border border-orf-border rounded-orf">
+          <div className="px-5 py-4 border-b border-orf-border">
+            <h2 className="text-sm font-semibold text-orf-text">Leads por Segmento</h2>
+          </div>
+          <div className="divide-y divide-orf-border">
+            {Object.entries(lm.bySegment)
+              .sort(([, a], [, b]) => b - a)
+              .map(([seg, count]) => {
+                const pct = lm.total > 0 ? Math.round((count / lm.total) * 100) : 0
+                return (
+                  <div key={seg} className="px-5 py-3 flex items-center gap-3">
+                    <span className="text-sm text-orf-text flex-1 truncate">{seg}</span>
+                    <div className="w-24">
+                      <div className="h-1.5 bg-orf-surface-2 rounded-full overflow-hidden">
+                        <div className="h-full bg-orf-primary rounded-full" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                    <span className="text-xs text-orf-text-3 w-8 text-right">{pct}%</span>
+                    <span className="text-xs text-orf-text-2 w-6 text-right font-semibold">{count}</span>
+                  </div>
+                )
+              })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

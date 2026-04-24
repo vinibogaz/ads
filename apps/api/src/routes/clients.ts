@@ -8,6 +8,10 @@ const clientSchema = z.object({
   description: z.string().max(1000).optional(),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional().default('#6366f1'),
   logoUrl: z.string().url().optional(),
+  website: z.string().max(500).optional(),
+  industry: z.string().max(255).optional(),
+  phone: z.string().max(50).optional(),
+  notes: z.string().max(5000).optional(),
 })
 
 export async function clientsRoutes(app: FastifyInstance) {

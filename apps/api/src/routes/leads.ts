@@ -64,23 +64,7 @@ export async function leadsRoutes(app: FastifyInstance) {
     return reply.send({ data: rows, meta: { page, perPage } })
   })
 
-  // GET /api/v1/leads/:id
-  app.get('/:id', async (request, reply) => {
-    const { id } = request.params as { id: string }
-
-    const lead = await db.query.leads.findFirst({
-      where: and(eq(leads.id, id), eq(leads.tenantId, request.user.tid)),
-      with: { stage: true, offlineConversions: true },
-    })
-
-    if (!lead) {
-      return reply.status(404).send({ error: 'NOT_FOUND', message: 'Lead not found', statusCode: 404 })
-    }
-
-    return reply.send({ data: lead })
-  })
-
-  // GET /api/v1/leads/metrics — aggregated KPIs
+  // GET /api/v1/leads/metrics — aggregated KPIs (must come BEFORE /:id)
   app.get('/metrics', async (request, reply) => {
     const q = request.query as { clientId?: string; from?: string; to?: string }
     const conditions = [eq(leads.tenantId, request.user.tid)]
@@ -126,6 +110,22 @@ export async function leadsRoutes(app: FastifyInstance) {
         bySegment,
       },
     })
+  })
+
+  // GET /api/v1/leads/:id
+  app.get('/:id', async (request, reply) => {
+    const { id } = request.params as { id: string }
+
+    const lead = await db.query.leads.findFirst({
+      where: and(eq(leads.id, id), eq(leads.tenantId, request.user.tid)),
+      with: { stage: true, offlineConversions: true },
+    })
+
+    if (!lead) {
+      return reply.status(404).send({ error: 'NOT_FOUND', message: 'Lead not found', statusCode: 404 })
+    }
+
+    return reply.send({ data: lead })
   })
 
   // POST /api/v1/leads
