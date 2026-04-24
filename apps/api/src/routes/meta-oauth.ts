@@ -162,9 +162,10 @@ export async function metaOAuthRoutes(app: FastifyInstance) {
     return reply.redirect(`${base}/integrations?meta_select=${created.length}`)
   })
 
-  // GET /api/v1/auth/meta/sync/:integrationId
+  // GET /api/v1/auth/meta/sync/:integrationId?month=4&year=2026
   app.get('/meta/sync/:integrationId', { config: { skipAuth: false } }, async (request, reply) => {
     const { integrationId } = request.params as { integrationId: string }
+    const q = request.query as { month?: string; year?: string }
 
     const integration = await db.query.adsPlatformIntegrations.findFirst({
       where: and(
@@ -185,8 +186,13 @@ export async function metaOAuthRoutes(app: FastifyInstance) {
     }
 
     const now = new Date()
-    const sinceDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
-    const untilDate = now.toISOString().split('T')[0]
+    const syncMonth = q.month ? parseInt(q.month) : now.getMonth() + 1
+    const syncYear = q.year ? parseInt(q.year) : now.getFullYear()
+    // For the requested month, fetch from 1st to last day (or today if current month)
+    const isCurrentMonth = syncMonth === now.getMonth() + 1 && syncYear === now.getFullYear()
+    const lastDay = isCurrentMonth ? now : new Date(syncYear, syncMonth, 0)
+    const sinceDate = new Date(syncYear, syncMonth - 1, 1).toISOString().split('T')[0]
+    const untilDate = lastDay.toISOString().split('T')[0]
 
     // Build URL properly to avoid encoding issues
     const insightsUrl = new URL(`${META_GRAPH_URL}/${integration.accountId}/insights`)
@@ -227,38 +233,43 @@ export async function metaOAuthRoutes(app: FastifyInstance) {
       .reduce((sum, a) => sum + parseInt(a.value ?? '0'), 0)
     const cpl = leadsCount > 0 ? spend / leadsCount : 0
 
+    const syncedMetrics = {
+      impressions,
+      clicks,
+      reach,
+      ctr: Math.round(ctr * 100) / 100,
+      cpm: Math.round(cpm * 100) / 100,
+      cpc: Math.round(cpc * 100) / 100,
+      leads: leadsCount,
+      cpl: Math.round(cpl * 100) / 100,
+      lastSyncAt: new Date().toISOString(),
+      period: `${sinceDate} - ${untilDate}`,
+    }
+
+    // Update integration global state (lastSyncAt + latest period meta)
     await db.update(adsPlatformIntegrations)
       .set({
         lastSyncAt: new Date(),
         updatedAt: new Date(),
         meta: {
           ...(integration.meta as object ?? {}),
-          impressions,
-          clicks,
-          reach,
-          ctr: Math.round(ctr * 100) / 100,
-          cpm: Math.round(cpm * 100) / 100,
-          cpc: Math.round(cpc * 100) / 100,
-          leads: leadsCount,
-          cpl: Math.round(cpl * 100) / 100,
-          lastSyncPeriod: `${sinceDate} - ${untilDate}`,
+          ...syncedMetrics,
         },
       })
       .where(eq(adsPlatformIntegrations.id, integrationId))
 
-    // Update budget spentAmount for this integration/month
-    const now2 = new Date()
+    // Update budget for the synced month — store spent + per-month metrics in budget.meta
     const budgetRow = await db.query.budgets.findFirst({
       where: and(
         eq(budgets.tenantId, request.user.tid),
         eq(budgets.integrationId, integrationId),
-        eq(budgets.month, now2.getMonth() + 1),
-        eq(budgets.year, now2.getFullYear()),
+        eq(budgets.month, syncMonth),
+        eq(budgets.year, syncYear),
       ),
     })
     if (budgetRow) {
       await db.update(budgets)
-        .set({ spentAmount: spend.toString(), updatedAt: new Date() })
+        .set({ spentAmount: spend.toString(), meta: syncedMetrics, updatedAt: new Date() })
         .where(eq(budgets.id, budgetRow.id))
     }
 

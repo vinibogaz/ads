@@ -189,6 +189,8 @@ export const budgets = pgTable(
     spentAmount: numeric('spent_amount', { precision: 12, scale: 2 }).notNull().default('0'),
     currency: varchar('currency', { length: 3 }).notNull().default('BRL'),
     notes: text('notes'),
+    // Per-month synced metrics (impressions, clicks, ctr, cpm, cpc, leads, cpl, lastSyncAt)
+    meta: jsonb('meta').default({}),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },

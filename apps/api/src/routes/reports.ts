@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { eq, and, sql } from 'drizzle-orm'
+import { eq, and, sql, gte, lt } from 'drizzle-orm'
 import { db, budgets, leads, funnelStages, adsPlatformIntegrations, offlineConversions, utmEntries, clients } from '@ads/db'
 
 export async function reportsRoutes(app: FastifyInstance) {
@@ -18,9 +18,12 @@ export async function reportsRoutes(app: FastifyInstance) {
       ? and(eq(budgets.tenantId, tid), eq(budgets.month, month), eq(budgets.year, year), eq(budgets.clientId, clientId))
       : and(eq(budgets.tenantId, tid), eq(budgets.month, month), eq(budgets.year, year))
 
+    // Filter leads by month/year entry date
+    const periodStart = new Date(year, month - 1, 1)
+    const periodEnd = new Date(year, month, 1) // exclusive
     const leadsWhere = clientId
-      ? and(eq(leads.tenantId, tid), eq(leads.clientId, clientId))
-      : eq(leads.tenantId, tid)
+      ? and(eq(leads.tenantId, tid), eq(leads.clientId, clientId), gte(leads.createdAt, periodStart), lt(leads.createdAt, periodEnd))
+      : and(eq(leads.tenantId, tid), gte(leads.createdAt, periodStart), lt(leads.createdAt, periodEnd))
 
     const integrationsWhere = clientId
       ? and(eq(adsPlatformIntegrations.tenantId, tid), eq(adsPlatformIntegrations.status, 'active'), eq(adsPlatformIntegrations.clientId, clientId))
@@ -75,16 +78,19 @@ export async function reportsRoutes(app: FastifyInstance) {
     const closeRate = qualifiedLeads > 0 ? (wonLeads / qualifiedLeads) * 100 : 0
     const budgetUsagePct = totalPlanned > 0 ? (totalSpent / totalPlanned) * 100 : 0
 
-    // Per-integration metrics from meta field
+    // Per-integration metrics: use budget.meta (per-month) with integration.meta as fallback
     const integrationMetrics = integrationRows.map((i) => {
-      const meta = (i.meta as any) ?? {}
       const budget = budgetRows.find((b) => b.integrationId === i.id)
+      // budget.meta has month-specific data; integration.meta has latest sync data
+      const meta = (budget?.meta as any && Object.keys(budget?.meta as any ?? {}).length > 0)
+        ? (budget!.meta as any)
+        : ((i.meta as any) ?? {})
       return {
         id: i.id,
         name: i.name,
         platform: i.platform,
         accountId: i.accountId,
-        lastSyncAt: i.lastSyncAt,
+        lastSyncAt: meta.lastSyncAt ?? i.lastSyncAt,
         spend: budget ? parseFloat(budget.spentAmount) : 0,
         planned: budget ? parseFloat(budget.plannedAmount) : 0,
         impressions: meta.impressions ?? 0,
@@ -93,6 +99,7 @@ export async function reportsRoutes(app: FastifyInstance) {
         ctr: meta.ctr ?? 0,
         cpm: meta.cpm ?? 0,
         cpl: meta.cpl ?? 0,
+        cpc: meta.cpc ?? 0,
         currency: budget?.currency ?? 'BRL',
       }
     })

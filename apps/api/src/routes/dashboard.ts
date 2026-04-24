@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { eq, and, sql } from 'drizzle-orm'
+import { eq, and, sql, gte, lt } from 'drizzle-orm'
 import { db, budgets, leads, offlineConversions, funnelStages, adsPlatformIntegrations, crmIntegrations } from '@ads/db'
 
 export async function dashboardRoutes(app: FastifyInstance) {
@@ -18,9 +18,12 @@ export async function dashboardRoutes(app: FastifyInstance) {
       ? and(eq(budgets.tenantId, tid), eq(budgets.month, month), eq(budgets.year, year), eq(budgets.clientId, clientId))
       : and(eq(budgets.tenantId, tid), eq(budgets.month, month), eq(budgets.year, year))
 
+    // Filter leads by month/year (entry date)
+    const periodStart = new Date(year, month - 1, 1)
+    const periodEnd = new Date(year, month, 1) // exclusive upper bound
     const leadsWhere = clientId
-      ? and(eq(leads.tenantId, tid), eq(leads.clientId, clientId))
-      : eq(leads.tenantId, tid)
+      ? and(eq(leads.tenantId, tid), eq(leads.clientId, clientId), gte(leads.createdAt, periodStart), lt(leads.createdAt, periodEnd))
+      : and(eq(leads.tenantId, tid), gte(leads.createdAt, periodStart), lt(leads.createdAt, periodEnd))
 
     const [budgetRows, leadRows, conversionRows, stageRows, platformCount, crmCount] =
       await Promise.all([
@@ -70,14 +73,20 @@ export async function dashboardRoutes(app: FastifyInstance) {
     const integrationRows = integrationIds.length > 0
       ? await db.query.adsPlatformIntegrations.findMany({
           where: (t, { inArray }) => inArray(t.id, integrationIds),
-          columns: { id: true, name: true, meta: true },
+          columns: { id: true, name: true, meta: true, lastSyncAt: true },
         })
       : []
     const integrationMap = Object.fromEntries(integrationRows.map((i) => [i.id, i]))
 
-    // Aggregate metrics from all synced integrations
-    const totalImpressions = integrationRows.reduce((s, i) => s + ((i.meta as any)?.impressions ?? 0), 0)
-    const totalClicks = integrationRows.reduce((s, i) => s + ((i.meta as any)?.clicks ?? 0), 0)
+    // Aggregate metrics from budget.meta (per-month) with integration.meta as fallback
+    const totalImpressions = budgetRows.reduce((s, b) => {
+      const m = (b.meta as any) ?? (b.integrationId ? (integrationMap[b.integrationId]?.meta as any) : null) ?? {}
+      return s + (m.impressions ?? 0)
+    }, 0)
+    const totalClicks = budgetRows.reduce((s, b) => {
+      const m = (b.meta as any) ?? (b.integrationId ? (integrationMap[b.integrationId]?.meta as any) : null) ?? {}
+      return s + (m.clicks ?? 0)
+    }, 0)
     const avgCtr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0
     const avgCpm = totalSpent > 0 && totalImpressions > 0 ? (totalSpent / totalImpressions) * 1000 : 0
     const cpl = totalLeads > 0 && totalSpent > 0 ? totalSpent / totalLeads : 0
@@ -86,7 +95,10 @@ export async function dashboardRoutes(app: FastifyInstance) {
       const planned = parseFloat(b.plannedAmount)
       const spent = parseFloat(b.spentAmount)
       const integration = b.integrationId ? integrationMap[b.integrationId] : null
-      const meta = (integration?.meta as any) ?? {}
+      // Use budget.meta (per-month) first, fall back to integration.meta (latest sync)
+      const meta = (b.meta as any && Object.keys(b.meta as any).length > 0)
+        ? (b.meta as any)
+        : ((integration?.meta as any) ?? {})
       return {
         id: b.id,
         platform: b.platform,
@@ -105,6 +117,7 @@ export async function dashboardRoutes(app: FastifyInstance) {
         cpm: meta.cpm ?? 0,
         leads: meta.leads ?? 0,
         cpl: meta.cpl ?? 0,
+        lastSyncAt: meta.lastSyncAt ?? integration?.lastSyncAt ?? null,
       }
     })
 

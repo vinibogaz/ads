@@ -5,6 +5,12 @@ import { useState } from 'react'
 import { api } from '@/lib/api'
 import type { AdsPlatform } from '@ads/shared'
 
+type LeadMetrics = {
+  total: number; paid: number; organic: number; paidPct: number; organicPct: number
+  won: number; totalRevenue: number; totalMrr: number; ticketMedio: number; avgClosingDays: number
+  bySegment: Record<string, number>
+}
+
 const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 
 const PLATFORM_LABELS: Record<AdsPlatform, string> = {
@@ -30,7 +36,8 @@ type ReportData = {
     cpl: number; cpa: number; qualificationRate: number; closeRate: number; totalConversionsSent: number
   }
   budgetByPlatform: { id: string; platform: AdsPlatform; integrationName: string | null; plannedAmount: number; spentAmount: number; remainingAmount: number; percentUsed: number; currency: string }[]
-  integrationMetrics: { id: string; name: string; platform: AdsPlatform; impressions: number; clicks: number; leads: number; ctr: number; cpm: number; cpl: number; spend: number; planned: number }[]
+  integrationMetrics: { id: string; name: string; platform: AdsPlatform; impressions: number; clicks: number; leads: number; ctr: number; cpm: number; cpl: number; cpc: number; spend: number; planned: number; lastSyncAt?: string | null }[]
+  revenueMetrics?: { totalRevenue: number; totalMrr: number; ticketMedio: number; avgClosingDays: number; won: number; paid: number; organic: number; paidPct: number; organicPct: number; bySegment: Record<string, number> }
   leadsByStage: { stageName: string; count: number; isWon: boolean; isLost: boolean; pct: number }[]
   conversionsByPlatform: { platform: AdsPlatform; count: number }[]
   topUtmSources: { source: string; medium: string | null; campaign: string | null; hits: number }[]
@@ -75,8 +82,20 @@ export function ReportsView() {
     },
   })
 
+  const { data: lmData } = useQuery({
+    queryKey: ['lead-metrics-report', month, year, clientId],
+    queryFn: () => {
+      const from = new Date(year, month - 1, 1).toISOString()
+      const to = new Date(year, month, 0, 23, 59, 59).toISOString()
+      const params = new URLSearchParams({ from, to })
+      if (clientId) params.set('clientId', clientId)
+      return api<LeadMetrics>(`/leads/metrics?${params}`)
+    },
+  })
+
   const clients: Client[] = clientsData?.data ?? []
   const r = data?.data
+  const lm = lmData?.data
   const monthLabel = `${MONTHS[month - 1]} ${year}`
 
   return (
@@ -130,11 +149,52 @@ export function ReportsView() {
             <StatCard label="Conv. Offline Enviadas" value={fmtN(r.summary.totalConversionsSent)} sub="Enviadas para plataformas" />
           </div>
 
+          {/* Revenue KPIs */}
+          {lm && (lm.totalRevenue > 0 || lm.totalMrr > 0 || lm.won > 0) && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <StatCard label="Receita Total" value={lm.totalRevenue > 0 ? fmt(lm.totalRevenue) : '—'} sub={`${lm.won} venda${lm.won !== 1 ? 's' : ''}`} color="text-emerald-400" />
+              <StatCard label="Ticket Médio" value={lm.ticketMedio > 0 ? fmt(lm.ticketMedio) : '—'} sub="Por venda fechada" />
+              <StatCard label="MRR Total" value={lm.totalMrr > 0 ? fmt(lm.totalMrr) : '—'} sub="Receita recorrente" />
+              <StatCard label="Tempo Médio de Fechamento" value={lm.avgClosingDays > 0 ? `${lm.avgClosingDays} dias` : '—'} sub="Da entrada até fechar" />
+            </div>
+          )}
+
+          {/* Pago vs Orgânico */}
+          {lm && lm.total > 0 && (
+            <div className="bg-orf-surface border border-orf-border rounded-orf">
+              <div className="px-5 py-4 border-b border-orf-border">
+                <h2 className="text-sm font-semibold text-orf-text">Leads — Pago vs Orgânico</h2>
+              </div>
+              <div className="px-5 py-4 grid grid-cols-2 gap-6">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-orf-text-2">Pago</span>
+                    <span className="text-sm font-semibold text-orf-text">{lm.paid} <span className="text-orf-text-3 font-normal">({lm.paidPct}%)</span></span>
+                  </div>
+                  <div className="h-2 bg-orf-surface-2 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${lm.paidPct}%` }} />
+                  </div>
+                  {r.summary.cpl > 0 && <p className="text-xs text-orf-text-3 mt-1">CPL: <strong className="text-orf-text">{fmt(r.summary.cpl)}</strong></p>}
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-orf-text-2">Orgânico</span>
+                    <span className="text-sm font-semibold text-orf-text">{lm.organic} <span className="text-orf-text-3 font-normal">({lm.organicPct}%)</span></span>
+                  </div>
+                  <div className="h-2 bg-orf-surface-2 rounded-full overflow-hidden">
+                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${lm.organicPct}%` }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Métricas por conta de anúncio */}
           {r.integrationMetrics.length > 0 && (
             <div className="bg-orf-surface border border-orf-border rounded-orf">
-              <div className="px-5 py-4 border-b border-orf-border">
+              <div className="px-5 py-4 border-b border-orf-border flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-orf-text">Métricas por Conta</h2>
+                <span className="text-xs text-orf-text-3">Dados do período sincronizado</span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
@@ -160,16 +220,17 @@ export function ReportsView() {
                             <div>
                               <p className="text-orf-text font-medium">{m.name}</p>
                               <p className="text-orf-text-3">{PLATFORM_LABELS[m.platform]}</p>
+                              {m.lastSyncAt && <p className="text-orf-text-3">Sync: {new Date(m.lastSyncAt).toLocaleString('pt-BR')}</p>}
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-right text-orf-text">{fmt(m.spend)}</td>
+                        <td className="px-4 py-3 text-right text-orf-text font-medium">{fmt(m.spend)}</td>
                         <td className="px-4 py-3 text-right text-orf-text-2">{m.impressions > 0 ? fmtN(m.impressions) : '—'}</td>
                         <td className="px-4 py-3 text-right text-orf-text-2">{m.clicks > 0 ? fmtN(m.clicks) : '—'}</td>
                         <td className="px-4 py-3 text-right text-orf-text-2">{m.ctr > 0 ? `${m.ctr}%` : '—'}</td>
                         <td className="px-4 py-3 text-right text-orf-text-2">{m.cpm > 0 ? fmt(m.cpm) : '—'}</td>
-                        <td className="px-4 py-3 text-right text-orf-text-2">{m.cpl > 0 ? fmt(m.cpl) : '—'}</td>
-                        <td className="px-5 py-3 text-right text-orf-primary font-medium">{m.leads}</td>
+                        <td className="px-4 py-3 text-right text-orf-text-2">{m.cpc > 0 ? fmt(m.cpc) : '—'}</td>
+                        <td className="px-5 py-3 text-right text-orf-primary font-medium">{fmtN(m.leads)}</td>
                         <td className="px-5 py-3 text-right text-orf-text-2">{m.cpl > 0 ? fmt(m.cpl) : '—'}</td>
                       </tr>
                     ))}
@@ -252,10 +313,38 @@ export function ReportsView() {
             )}
           </div>
 
+          {/* Leads por Segmento */}
+          {lm && Object.keys(lm.bySegment).length > 0 && (
+            <div className="bg-orf-surface border border-orf-border rounded-orf">
+              <div className="px-5 py-4 border-b border-orf-border">
+                <h2 className="text-sm font-semibold text-orf-text">Leads por Segmento / Campanha</h2>
+              </div>
+              <div className="divide-y divide-orf-border">
+                {Object.entries(lm.bySegment)
+                  .sort(([, a], [, b]) => b - a)
+                  .map(([seg, count]) => {
+                    const pct = lm.total > 0 ? Math.round((count / lm.total) * 100) : 0
+                    return (
+                      <div key={seg} className="px-5 py-3 flex items-center gap-3">
+                        <span className="text-sm text-orf-text flex-1 truncate">{seg}</span>
+                        <div className="w-32">
+                          <div className="h-1.5 bg-orf-surface-2 rounded-full overflow-hidden">
+                            <div className="h-full bg-orf-primary rounded-full" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                        <span className="text-xs text-orf-text-3 w-8 text-right">{pct}%</span>
+                        <span className="text-xs text-orf-text-2 w-6 text-right font-semibold">{count}</span>
+                      </div>
+                    )
+                  })}
+              </div>
+            </div>
+          )}
+
           {/* Empty state */}
           {r.summary.totalLeads === 0 && r.budgetByPlatform.length === 0 && (
             <div className="py-12 text-center text-sm text-orf-text-2">
-              Nenhum dado encontrado para {monthLabel}{r.client ? ` — ${r.client.name}` : ''}.
+              Nenhum dado encontrado para {monthLabel}{r.client ? ` — ${r.client.name}` : ''}. Certifique-se de sincronizar o período.
             </div>
           )}
         </>

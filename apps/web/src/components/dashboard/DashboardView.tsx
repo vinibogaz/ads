@@ -138,9 +138,12 @@ export function DashboardView() {
     setSyncingId(integrationId)
     setSyncMsg(null)
     try {
-      const res = await api<{ spend: number; leads: number; impressions: number; clicks: number; ctr: number; budgetUpdated: boolean }>(`/auth/meta/sync/${integrationId}`)
+      const res = await api<{ spend: number; leads: number; impressions: number; clicks: number; ctr: number; budgetUpdated: boolean }>(
+        `/auth/meta/sync/${integrationId}?month=${month}&year=${year}`
+      )
       queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] })
       queryClient.invalidateQueries({ queryKey: ['budget'] })
+      queryClient.invalidateQueries({ queryKey: ['lead-metrics'] })
       const { spend, leads, impressions, clicks, ctr, budgetUpdated } = res.data
       setSyncMsg(`✓ Gasto: ${fmt(spend)} · Leads: ${leads} · ${fmtN(impressions)} impressões · ${fmtN(clicks)} cliques · CTR: ${ctr}%${budgetUpdated ? ' · Budget atualizado' : ''}`)
     } catch (e: any) {
