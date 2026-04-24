@@ -222,7 +222,8 @@ export async function metaOAuthRoutes(app: FastifyInstance) {
     const ctr = parseFloat(insights?.ctr ?? '0')
     const cpm = parseFloat(insights?.cpm ?? '0')
     const cpc = parseFloat(insights?.cpc ?? '0')
-    const leadsCount = (insights?.actions?.filter((a) => a.action_type === 'lead') ?? [])
+    const LEAD_ACTION_TYPES = ['lead', 'leadgen.other', 'onsite_conversion.lead_grouped', 'offsite_conversion.fb_pixel_lead']
+    const leadsCount = (insights?.actions?.filter((a) => LEAD_ACTION_TYPES.includes(a.action_type)) ?? [])
       .reduce((sum, a) => sum + parseInt(a.value ?? '0'), 0)
     const cpl = leadsCount > 0 ? spend / leadsCount : 0
 
@@ -327,7 +328,7 @@ export async function metaOAuthRoutes(app: FastifyInstance) {
     const campaigns = (campaignsData.data ?? []).map((c) => {
       const insight = c.insights?.data?.[0]
       const spend = parseFloat(insight?.spend ?? '0')
-      const leads = (insight?.actions?.filter((a) => a.action_type === 'lead') ?? [])
+      const leads = (insight?.actions?.filter((a) => ['lead', 'leadgen.other', 'onsite_conversion.lead_grouped', 'offsite_conversion.fb_pixel_lead'].includes(a.action_type)) ?? [])
         .reduce((sum, a) => sum + parseInt(a.value ?? '0'), 0)
       const cpl = leads > 0 ? spend / leads : 0
       return { id: c.id, name: c.name, status: c.status, spend, leads, cpl: Math.round(cpl * 100) / 100 }
