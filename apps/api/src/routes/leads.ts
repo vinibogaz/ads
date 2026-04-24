@@ -44,7 +44,7 @@ export async function leadsRoutes(app: FastifyInstance) {
 
   // GET /api/v1/leads
   app.get('/', async (request, reply) => {
-    const query = request.query as { status?: string; stageId?: string; page?: string; perPage?: string }
+    const query = request.query as { status?: string; stageId?: string; clientId?: string; page?: string; perPage?: string }
     const page = parseInt(query.page ?? '1')
     const perPage = Math.min(parseInt(query.perPage ?? '50'), 100)
     const offset = (page - 1) * perPage
@@ -52,6 +52,7 @@ export async function leadsRoutes(app: FastifyInstance) {
     const conditions = [eq(leads.tenantId, request.user.tid)]
     if (query.status) conditions.push(eq(leads.status, query.status as any))
     if (query.stageId) conditions.push(eq(leads.stageId, query.stageId))
+    if (query.clientId) conditions.push(eq(leads.clientId, query.clientId))
 
     const rows = await db.query.leads.findMany({
       where: and(...conditions),
