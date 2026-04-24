@@ -80,7 +80,8 @@ function GoogleSheetsIcon() {
 
 function GoogleSheetsSection({ onGoogleSetup }: { onGoogleSetup?: string | null }) {
   const queryClient = useQueryClient()
-  const [setupId, setSetupId] = useState<string | null>(onGoogleSetup ?? null)
+  const [setupId, setSetupId] = useState<string | null>(null)
+  useEffect(() => { if (onGoogleSetup) setSetupId(onGoogleSetup) }, [onGoogleSetup])
   const [setupForm, setSetupForm] = useState({ name: '', spreadsheetUrl: '', sheetName: '' })
   const [sheetTabs, setSheetTabs] = useState<{ id: number; title: string }[]>([])
   const [loadingTabs, setLoadingTabs] = useState(false)
