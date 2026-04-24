@@ -36,10 +36,14 @@ const envSchema = z.object({
   META_APP_SECRET: z.string().optional(),
   META_REDIRECT_URI: z.string().optional().default('https://api-ads.orffia.com/api/v1/auth/meta/callback'),
 
-  // Google OAuth
+  // Google OAuth (Sheets)
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_REDIRECT_URI: z.string().optional().default('https://api-ads.orffia.com/api/v1/auth/google/callback'),
+
+  // Google Ads API
+  GOOGLE_ADS_DEVELOPER_TOKEN: z.string().optional(),
+  GOOGLE_ADS_REDIRECT_URI: z.string().optional().default('https://api-ads.orffia.com/api/v1/auth/google-ads/callback'),
 })
 
 const parsed = envSchema.safeParse(process.env)

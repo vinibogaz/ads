@@ -17,7 +17,7 @@ const ADS_PLATFORM_LABELS: Record<AdsPlatform, string> = {
   other: 'Outro',
 }
 
-const OAUTH_PLATFORMS: Partial<Record<AdsPlatform, boolean>> = { meta: true }
+const OAUTH_PLATFORMS: Partial<Record<AdsPlatform, boolean>> = { meta: true, google: true }
 
 const CRM_PLATFORM_LABELS: Record<CrmPlatform, string> = {
   rd_station: 'RD Station',
@@ -68,6 +68,118 @@ function MetaIcon() {
 type GSheet = {
   id: string; name: string; spreadsheetId: string; sheetName: string
   spreadsheetTitle?: string; googleEmail?: string; status: string; lastSyncAt?: string; clientId?: string
+}
+
+function GoogleAdsIcon() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+      <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z" fill="#4285F4"/>
+    </svg>
+  )
+}
+
+function GoogleAdsSection({ onGoogleAdsSetup }: { onGoogleAdsSetup?: string | null }) {
+  const queryClient = useQueryClient()
+  const [setupId, setSetupId] = useState<string | null>(null)
+  useEffect(() => { if (onGoogleAdsSetup) setSetupId(onGoogleAdsSetup) }, [onGoogleAdsSetup])
+  const [setupForm, setSetupForm] = useState({ name: '', customerId: '' })
+  const [setupError, setSetupError] = useState('')
+
+  const { data: platformsData } = useQuery({
+    queryKey: ['ads-platforms'],
+    queryFn: () => api<AdsPlatformIntegration[]>('/ads-integrations/platforms'),
+  })
+  const platforms: AdsPlatformIntegration[] = platformsData?.data ?? []
+
+  // Pre-fill name from pending record
+  useEffect(() => {
+    if (setupId) {
+      const pending = platforms.find((p) => p.id === setupId)
+      if (pending) setSetupForm(f => ({ ...f, name: (pending.meta as any)?.googleEmail ? `Google Ads (${(pending.meta as any).googleEmail.split('@')[0]})` : 'Google Ads' }))
+    }
+  }, [setupId, platforms])
+
+  const completeSetup = useMutation({
+    mutationFn: () =>
+      api(`/auth/google-ads/setup/${setupId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          name: setupForm.name,
+          customerId: setupForm.customerId.trim(),
+        }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ads-platforms'] })
+      setSetupId(null)
+      setSetupForm({ name: '', customerId: '' })
+      setSetupError('')
+      window.history.replaceState({}, '', '/integrations')
+    },
+    onError: (e: any) => setSetupError(e.message ?? 'Erro ao salvar'),
+  })
+
+  if (!setupId) return null
+
+  return (
+    <>
+      {/* Setup modal — shown after OAuth callback */}
+      {setupId && (
+        <Modal title="Configurar Google Ads" onClose={() => {
+          // Delete pending row if user cancels
+          api(`/ads-integrations/platforms/${setupId}`, { method: 'DELETE' }).catch(() => {})
+          setSetupId(null)
+          window.history.replaceState({}, '', '/integrations')
+        }}>
+          <div className="space-y-4">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-orf-sm p-3 text-xs text-emerald-700">
+              ✓ Conta Google conectada. Informe o Customer ID da sua conta Google Ads para ativar.
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-orf-text-2 mb-1.5">Customer ID <span className="text-orf-text-3">(ex: 123-456-7890)</span></label>
+              <input
+                type="text"
+                placeholder="123-456-7890"
+                value={setupForm.customerId}
+                onChange={(e) => setSetupForm(f => ({ ...f, customerId: e.target.value }))}
+                className="w-full px-3 py-2 bg-orf-surface-2 border border-orf-border rounded-orf-sm text-sm text-orf-text placeholder:text-orf-text-3 focus:outline-none focus:border-orf-primary"
+              />
+              <p className="text-xs text-orf-text-3 mt-1">Encontre em: Google Ads → clique no ícone de ajuda → "ID do cliente"</p>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-orf-text-2 mb-1.5">Nome da integração</label>
+              <input
+                type="text"
+                placeholder="Ex: Google Ads — Cliente XYZ"
+                value={setupForm.name}
+                onChange={(e) => setSetupForm(f => ({ ...f, name: e.target.value }))}
+                className="w-full px-3 py-2 bg-orf-surface-2 border border-orf-border rounded-orf-sm text-sm text-orf-text placeholder:text-orf-text-3 focus:outline-none focus:border-orf-primary"
+              />
+            </div>
+            {setupError && <p className="text-xs text-red-500">{setupError}</p>}
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={() => {
+                  api(`/ads-integrations/platforms/${setupId}`, { method: 'DELETE' }).catch(() => {})
+                  setSetupId(null)
+                  window.history.replaceState({}, '', '/integrations')
+                }}
+                className="flex-1 px-4 py-2 border border-orf-border rounded-orf-sm text-sm text-orf-text-2 hover:text-orf-text"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => completeSetup.mutate()}
+                disabled={!setupForm.name || !setupForm.customerId || completeSetup.isPending}
+                className="flex-1 px-4 py-2 bg-orf-primary text-white rounded-orf-sm text-sm font-medium hover:bg-orf-primary/90 disabled:opacity-50"
+              >
+                {completeSetup.isPending ? 'Salvando...' : 'Ativar integração'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </>
+  )
 }
 
 function GoogleSheetsIcon() {
@@ -319,6 +431,7 @@ export function IntegrationsView() {
   const queryClient = useQueryClient()
   const searchParams = useSearchParams()
   const googleSetup = searchParams.get('google_setup')
+  const googleAdsSetup = searchParams.get('google_ads_setup')
   const [showPlatformModal, setShowPlatformModal] = useState(false)
   const [showCrmModal, setShowCrmModal] = useState(false)
   const [showSelectionModal, setShowSelectionModal] = useState(false)
@@ -328,6 +441,7 @@ export function IntegrationsView() {
   const [error, setError] = useState('')
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [connectingMeta, setConnectingMeta] = useState(false)
+  const [connectingGoogleAds, setConnectingGoogleAds] = useState(false)
   const hasPreSelected = useRef(false)
 
   const { data: platformsData, isLoading: loadingPlatforms } = useQuery({
@@ -368,6 +482,15 @@ export function IntegrationsView() {
     } else if (metaError === 'google_token_failed') {
       setToast({ type: 'error', message: 'Falha ao conectar com Google. Tente novamente.' })
       window.history.replaceState({}, '', '/integrations')
+    } else if (metaError === 'google_ads_denied') {
+      setToast({ type: 'error', message: 'Autorização com Google Ads foi cancelada.' })
+      window.history.replaceState({}, '', '/integrations')
+    } else if (metaError === 'google_ads_token_failed') {
+      setToast({ type: 'error', message: 'Falha ao conectar com Google Ads. Tente novamente.' })
+      window.history.replaceState({}, '', '/integrations')
+    } else if (metaError === 'google_ads_state_invalid') {
+      setToast({ type: 'error', message: 'Estado OAuth inválido. Tente conectar novamente.' })
+      window.history.replaceState({}, '', '/integrations')
     }
   }, [searchParams, queryClient])
 
@@ -388,6 +511,17 @@ export function IntegrationsView() {
     const t = setTimeout(() => setToast(null), 5000)
     return () => clearTimeout(t)
   }, [toast])
+
+  const handleConnectGoogleAds = async () => {
+    setConnectingGoogleAds(true)
+    try {
+      const res = await api<{ url: string }>('/auth/google-ads/url')
+      window.location.href = res.data.url
+    } catch (e: any) {
+      setToast({ type: 'error', message: e.message ?? 'Erro ao iniciar conexão com Google Ads' })
+      setConnectingGoogleAds(false)
+    }
+  }
 
   const handleConnectMeta = async () => {
     setConnectingMeta(true)
@@ -461,9 +595,19 @@ export function IntegrationsView() {
     mutationFn: (id: string) => api(`/auth/meta/sync/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ads-platforms'] })
-      setToast({ type: 'success', message: 'Sincronização concluída.' })
+      setToast({ type: 'success', message: 'Sincronização Meta concluída.' })
     },
     onError: (e: any) => setToast({ type: 'error', message: e.message ?? 'Erro ao sincronizar' }),
+  })
+
+  const syncGoogleAds = useMutation({
+    mutationFn: (id: string) => api(`/auth/google-ads/sync/${id}`, { method: 'POST' }),
+    onSuccess: (res: any) => {
+      queryClient.invalidateQueries({ queryKey: ['ads-platforms'] })
+      const d = res?.data ?? {}
+      setToast({ type: 'success', message: `Google Ads: ${(d.impressions ?? 0).toLocaleString('pt-BR')} impr. · ${(d.clicks ?? 0).toLocaleString('pt-BR')} cliques · R$ ${(d.spend ?? 0).toFixed(2)}` })
+    },
+    onError: (e: any) => setToast({ type: 'error', message: e.message ?? 'Erro ao sincronizar Google Ads' }),
   })
 
   const toggleSelect = (id: string) => {
@@ -495,28 +639,55 @@ export function IntegrationsView() {
         </p>
       </div>
 
-      {/* Quick Connect: Meta */}
+      {/* Quick Connect */}
       <section className="bg-orf-surface border border-orf-border rounded-orf p-5">
         <h2 className="text-sm font-semibold text-orf-text mb-4">Conexão Rápida</h2>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-3 flex-1">
-            <div className="w-10 h-10 rounded-orf-sm bg-blue-600 flex items-center justify-center text-white shrink-0">
-              <MetaIcon />
+        <div className="space-y-4">
+          {/* Meta */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 flex-1">
+              <div className="w-10 h-10 rounded-orf-sm bg-blue-600 flex items-center justify-center text-white shrink-0">
+                <MetaIcon />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-orf-text">Meta Ads</p>
+                <p className="text-xs text-orf-text-2">Facebook & Instagram Ads — OAuth seguro, você escolhe quais contas monitorar</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-medium text-orf-text">Meta Ads</p>
-              <p className="text-xs text-orf-text-2">Facebook & Instagram Ads — OAuth seguro, você escolhe quais contas monitorar</p>
-            </div>
+            <button
+              onClick={handleConnectMeta}
+              disabled={connectingMeta}
+              className="px-4 py-2 bg-blue-600 text-white rounded-orf-sm text-xs font-medium hover:bg-blue-700 disabled:opacity-60 transition-colors whitespace-nowrap"
+            >
+              {connectingMeta ? 'Redirecionando...' : 'Conectar com Meta'}
+            </button>
           </div>
-          <button
-            onClick={handleConnectMeta}
-            disabled={connectingMeta}
-            className="px-4 py-2 bg-blue-600 text-white rounded-orf-sm text-xs font-medium hover:bg-blue-700 disabled:opacity-60 transition-colors whitespace-nowrap"
-          >
-            {connectingMeta ? 'Redirecionando...' : 'Conectar com Meta'}
-          </button>
+
+          <div className="border-t border-orf-border" />
+
+          {/* Google Ads */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 flex-1">
+              <div className="w-10 h-10 rounded-orf-sm bg-white border border-orf-border flex items-center justify-center shrink-0">
+                <GoogleAdsIcon />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-orf-text">Google Ads</p>
+                <p className="text-xs text-orf-text-2">Visualize métricas de campanhas — impressões, cliques, gasto, CTR, CPC e CPM</p>
+              </div>
+            </div>
+            <button
+              onClick={handleConnectGoogleAds}
+              disabled={connectingGoogleAds}
+              className="px-4 py-2 bg-white border border-orf-border text-orf-text rounded-orf-sm text-xs font-medium hover:bg-orf-surface-2 disabled:opacity-60 transition-colors whitespace-nowrap flex items-center gap-2"
+            >
+              {connectingGoogleAds ? 'Redirecionando...' : '+ Conectar Google Ads'}
+            </button>
+          </div>
         </div>
       </section>
+
+      <GoogleAdsSection onGoogleAdsSetup={googleAdsSetup} />
 
       {/* Ads Platforms */}
       <section className="space-y-4">
@@ -555,7 +726,16 @@ export function IntegrationsView() {
                       disabled={syncPlatform.isPending}
                       className="text-xs text-orf-primary hover:text-orf-primary/80 transition-colors"
                     >
-                      Sync
+                      {syncPlatform.isPending ? 'Sync...' : 'Sync'}
+                    </button>
+                  )}
+                  {p.platform === 'google' && (
+                    <button
+                      onClick={() => syncGoogleAds.mutate(p.id)}
+                      disabled={syncGoogleAds.isPending}
+                      className="text-xs text-orf-primary hover:text-orf-primary/80 transition-colors"
+                    >
+                      {syncGoogleAds.isPending ? 'Sync...' : 'Sync'}
                     </button>
                   )}
                   <button

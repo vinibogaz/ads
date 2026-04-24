@@ -24,6 +24,7 @@ import { clientsRoutes } from './routes/clients.js'
 import { reportsRoutes } from './routes/reports.js'
 import { googleSheetsRoutes } from './routes/google-sheets.js'
 import { googleOAuthRoutes } from './routes/google-oauth.js'
+import { googleAdsRoutes } from './routes/google-ads.js'
 import { env } from './config/env.js'
 
 const app = Fastify({
@@ -73,6 +74,7 @@ await app.register(clientsRoutes, { prefix: '/api/v1/clients' })
 await app.register(reportsRoutes, { prefix: '/api/v1/reports' })
 await app.register(googleSheetsRoutes, { prefix: '/api/v1/google-sheets' })
 await app.register(googleOAuthRoutes, { prefix: '/api/v1/auth' })
+await app.register(googleAdsRoutes, { prefix: '/api/v1/auth' })
 
 // Global error handler
 app.setErrorHandler((error, request, reply) => {
