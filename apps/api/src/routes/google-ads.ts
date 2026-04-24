@@ -317,7 +317,7 @@ export async function googleAdsRoutes(app: FastifyInstance) {
           leadId: body.leadId,
           integrationId: body.integrationId,
           platform: 'google',
-          event: 'purchase',
+          event: 'sale',
           externalId: body.gclid,
           status: 'error',
           payload: body as any,
