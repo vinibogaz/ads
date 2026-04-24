@@ -318,9 +318,8 @@ export async function googleAdsRoutes(app: FastifyInstance) {
           integrationId: body.integrationId,
           platform: 'google',
           event: 'sale',
-          externalId: body.gclid,
           status: 'error',
-          payload: body as any,
+          responsePayload: { gclid: body.gclid, ...body },
           sentAt: new Date(),
         })
       }
@@ -334,10 +333,9 @@ export async function googleAdsRoutes(app: FastifyInstance) {
         leadId: body.leadId,
         integrationId: body.integrationId,
         platform: 'google',
-        event: 'purchase',
-        externalId: body.gclid,
+        event: 'sale',
         status: 'active',
-        payload: body as any,
+        responsePayload: { gclid: body.gclid, result: data },
         sentAt: new Date(),
       })
     }
