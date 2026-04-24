@@ -190,11 +190,26 @@ function GoogleSheetsIcon() {
   )
 }
 
+const LEAD_FIELD_LABELS: Record<string, string> = {
+  name: 'Nome', email: 'E-mail', phone: 'Telefone', company: 'Empresa',
+  status: 'Status', utmSource: 'UTM Source', utmMedium: 'UTM Medium',
+  utmCampaign: 'UTM Campaign', utmContent: 'UTM Content', utmTerm: 'UTM Term',
+  createdAt: 'Data de criação',
+}
+
+const DEFAULT_FIELD_MAPPING: Record<string, string> = {
+  name: 'A', email: 'B', phone: 'C', company: 'D',
+  status: 'E', utmSource: 'F', utmMedium: 'G', utmCampaign: 'H',
+  utmContent: '', utmTerm: '', createdAt: 'I',
+}
+
 function GoogleSheetsSection({ onGoogleSetup }: { onGoogleSetup?: string | null }) {
   const queryClient = useQueryClient()
   const [setupId, setSetupId] = useState<string | null>(null)
   useEffect(() => { if (onGoogleSetup) setSetupId(onGoogleSetup) }, [onGoogleSetup])
   const [setupForm, setSetupForm] = useState({ name: '', spreadsheetUrl: '', sheetName: '' })
+  const [fieldMapping, setFieldMapping] = useState<Record<string, string>>(DEFAULT_FIELD_MAPPING)
+  const [showMapping, setShowMapping] = useState(false)
   const [sheetTabs, setSheetTabs] = useState<{ id: number; title: string }[]>([])
   const [loadingTabs, setLoadingTabs] = useState(false)
   const [setupError, setSetupError] = useState('')
@@ -259,6 +274,10 @@ function GoogleSheetsSection({ onGoogleSetup }: { onGoogleSetup?: string | null 
   const completeSetup = useMutation({
     mutationFn: () => {
       const spreadsheetId = extractSpreadsheetId(setupForm.spreadsheetUrl)
+      // Only include fields that have a column assigned
+      const activeMapping = Object.fromEntries(
+        Object.entries(fieldMapping).filter(([, col]) => col.trim() !== '')
+      )
       return api(`/google-sheets/${setupId}`, {
         method: 'PATCH',
         body: JSON.stringify({
@@ -266,6 +285,7 @@ function GoogleSheetsSection({ onGoogleSetup }: { onGoogleSetup?: string | null 
           spreadsheetId,
           sheetName: setupForm.sheetName,
           spreadsheetTitle: setupForm.name,
+          fieldMapping: activeMapping,
         }),
       })
     },
@@ -273,6 +293,8 @@ function GoogleSheetsSection({ onGoogleSetup }: { onGoogleSetup?: string | null 
       queryClient.invalidateQueries({ queryKey: ['google-sheets'] })
       setSetupId(null)
       setSetupForm({ name: '', spreadsheetUrl: '', sheetName: '' })
+      setFieldMapping(DEFAULT_FIELD_MAPPING)
+      setShowMapping(false)
       setSheetTabs([])
       setSetupError('')
       window.history.replaceState({}, '', '/integrations')
@@ -394,6 +416,42 @@ function GoogleSheetsSection({ onGoogleSetup }: { onGoogleSetup?: string | null 
                 </select>
               </div>
             )}
+
+            {/* Field mapping */}
+            <div className="border border-orf-border rounded-orf-sm overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowMapping(v => !v)}
+                className="w-full flex items-center justify-between px-3 py-2.5 bg-orf-surface-2 text-xs font-medium text-orf-text-2 hover:text-orf-text transition-colors"
+              >
+                <span>Mapeamento de colunas</span>
+                <span className="text-orf-text-3">{showMapping ? '▲' : '▼'} {Object.values(fieldMapping).filter(Boolean).length} campos ativos</span>
+              </button>
+              {showMapping && (
+                <div className="p-3 space-y-1">
+                  <p className="text-xs text-orf-text-3 mb-2">Defina qual coluna da planilha receberá cada campo. Deixe em branco para não exportar.</p>
+                  <div className="grid grid-cols-[1fr_56px] gap-x-2 gap-y-1.5">
+                    <span className="text-xs font-medium text-orf-text-3 uppercase tracking-wide">Campo</span>
+                    <span className="text-xs font-medium text-orf-text-3 uppercase tracking-wide text-center">Col.</span>
+                    {Object.entries(LEAD_FIELD_LABELS).map(([field, label]) => (
+                      <>
+                        <span key={`${field}-label`} className="text-xs text-orf-text py-1">{label}</span>
+                        <input
+                          key={`${field}-input`}
+                          type="text"
+                          maxLength={2}
+                          placeholder="—"
+                          value={fieldMapping[field] ?? ''}
+                          onChange={(e) => setFieldMapping(m => ({ ...m, [field]: e.target.value.toUpperCase() }))}
+                          className="w-full px-2 py-1 bg-orf-surface border border-orf-border rounded text-xs text-center text-orf-text font-mono uppercase focus:outline-none focus:border-orf-primary"
+                        />
+                      </>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div>
               <label className="block text-xs font-medium text-orf-text-2 mb-1.5">Nome da integração</label>
               <input
