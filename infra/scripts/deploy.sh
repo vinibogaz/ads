@@ -4,6 +4,7 @@
 set -euo pipefail
 
 COMPOSE_FILE="infra/compose/docker-compose.prod.yml"
+COMPOSE_PROJECT="ads"
 ENV_FILE=".env"
 DB_HOST="172.17.0.1"
 DB_USER="evolution"
@@ -59,14 +60,14 @@ echo "✅ Schema aplicado"
 
 echo ""
 echo "=== 6. Build e subida dos containers ==="
-docker compose -f "$COMPOSE_FILE" build
-docker compose -f "$COMPOSE_FILE" up -d
+docker compose -p "$COMPOSE_PROJECT" --env-file "$ENV_FILE" -f "$COMPOSE_FILE" build
+docker compose -p "$COMPOSE_PROJECT" --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d
 echo "✅ Containers no ar"
 
 echo ""
 echo "=== 7. Aguardar 20s e verificar saúde ==="
 sleep 20
-docker compose -f "$COMPOSE_FILE" ps
+docker compose -p "$COMPOSE_PROJECT" --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps
 
 API_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:4000/health 2>/dev/null || echo "000")
 WEB_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:4001 2>/dev/null || echo "000")
