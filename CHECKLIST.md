@@ -128,7 +128,10 @@
 ---
 
 ## Multi-workspace + Permissões (modelo Mlabs)
-- ❌ Workspace por cliente isolado (cada cliente = workspace independente)
-- ❌ Usuário com acesso a múltiplos workspaces
-- ❌ Convite por workspace com permissão isolada
-- ❌ Roles (admin, membro)
+- ✅ Workspace por cliente isolado (cada cliente = workspace independente)
+- ✅ Usuário com acesso a múltiplos workspaces + seletor no sidebar
+- ✅ Convite por workspace com link de 7 dias
+- ✅ Roles (Proprietário, Admin, Editor, Visualizador)
+- ✅ Criar novo workspace
+- ✅ Página de membros (/settings/members)
+- ✅ Aceitar convite via link (/invite/[token])
