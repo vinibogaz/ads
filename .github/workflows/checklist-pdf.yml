@@ -1,0 +1,36 @@
+name: Generate Checklist PDF
+
+on:
+  push:
+    paths:
+      - 'CHECKLIST.md'
+    branches:
+      - main
+
+jobs:
+  generate-pdf:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install md-to-pdf
+        run: npm install -g md-to-pdf
+
+      - name: Generate PDF
+        run: md-to-pdf CHECKLIST.md --pdf-options '{"format":"A4","margin":{"top":"2cm","bottom":"2cm","left":"2cm","right":"2cm"}}'
+
+      - name: Commit PDF
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add CHECKLIST.pdf
+          git diff --staged --quiet || git commit -m "chore: auto-update CHECKLIST.pdf [skip ci]"
+          git push
