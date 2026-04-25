@@ -1,10 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import { api } from '@/lib/api'
 import { useClientStore } from '@/store/client'
+import { useAuthStore } from '@/store/auth'
 
 type Client = { id: string; name: string; color: string }
 
@@ -103,6 +105,15 @@ const navItems = [
 
 const bottomNavItems = [
   {
+    label: 'Membros',
+    href: '/settings/members',
+    icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    ),
+  },
+  {
     label: 'Integrações',
     href: '/integrations',
     icon: (
@@ -123,6 +134,86 @@ const bottomNavItems = [
   },
 ]
 
+function WorkspaceSwitcher() {
+  const router = useRouter()
+  const { user, workspaces, setTokens } = useAuthStore()
+  const [open, setOpen] = useState(false)
+  const [switching, setSwitching] = useState(false)
+
+  const activeWorkspace = workspaces.find((w) => w.id === user?.tid) ?? workspaces[0]
+
+  const switchTo = async (id: string) => {
+    if (id === user?.tid || switching) return
+    setSwitching(true)
+    setOpen(false)
+    try {
+      const res = await api<{ accessToken: string; refreshToken: string }>(`/workspaces/${id}/switch`, { method: 'POST' })
+      setTokens(res.data.accessToken)
+      router.refresh()
+    } catch {
+      // ignore
+    } finally {
+      setSwitching(false)
+    }
+  }
+
+  return (
+    <div className="px-3 py-3 border-b border-orf-border relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-orf-sm hover:bg-orf-surface-2 transition-colors text-left"
+      >
+        <div className="w-6 h-6 rounded bg-orf-primary flex items-center justify-center shrink-0">
+          <span className="text-white font-bold text-xs">{activeWorkspace?.name.charAt(0).toUpperCase() ?? 'A'}</span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-orf-text truncate">{activeWorkspace?.name ?? 'Orffia Ads'}</p>
+          <p className="text-xs text-orf-text-3 capitalize">{activeWorkspace?.plan ?? 'trial'}</p>
+        </div>
+        <svg className="w-3 h-3 text-orf-text-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute left-2 right-2 top-full mt-1 z-50 bg-orf-surface border border-orf-border rounded-orf shadow-xl py-1">
+          {workspaces.map((w) => (
+            <button
+              key={w.id}
+              onClick={() => switchTo(w.id)}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left hover:bg-orf-surface-2 transition-colors ${w.id === user?.tid ? 'text-orf-primary font-medium' : 'text-orf-text'}`}
+            >
+              <div className="w-5 h-5 rounded bg-orf-primary/20 flex items-center justify-center shrink-0">
+                <span className="text-orf-primary font-bold text-xs">{w.name.charAt(0).toUpperCase()}</span>
+              </div>
+              <span className="truncate">{w.name}</span>
+              {w.id === user?.tid && <span className="ml-auto text-xs">✓</span>}
+            </button>
+          ))}
+          <div className="border-t border-orf-border mt-1 pt-1">
+            <Link
+              href="/settings/workspace"
+              onClick={() => setOpen(false)}
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-orf-text-2 hover:text-orf-text hover:bg-orf-surface-2 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+              Criar workspace
+            </Link>
+            <Link
+              href="/settings/members"
+              onClick={() => setOpen(false)}
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-orf-text-2 hover:text-orf-text hover:bg-orf-surface-2 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              Membros do workspace
+            </Link>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function Sidebar() {
   const pathname = usePathname()
   const { selectedClientId, setSelectedClientId } = useClientStore()
@@ -138,14 +229,15 @@ export function Sidebar() {
   return (
     <aside className="w-56 bg-orf-surface border-r border-orf-border flex flex-col shrink-0">
       {/* Logo */}
-      <div className="px-4 py-5 border-b border-orf-border">
+      <div className="px-4 py-4 border-b border-orf-border">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-orf-sm bg-orf-primary flex items-center justify-center">
-            <span className="text-white font-bold text-xs">A</span>
+          <div className="w-6 h-6 rounded bg-orf-primary/10 flex items-center justify-center">
+            <span className="text-orf-primary font-bold text-xs">O</span>
           </div>
-          <span className="font-bold text-orf-text text-sm">Orffia Ads</span>
+          <span className="text-xs text-orf-text-3 font-medium">Orffia Ads</span>
         </div>
       </div>
+      <WorkspaceSwitcher />
 
       {/* Client selector */}
       {clients.length > 0 && (

@@ -28,6 +28,7 @@ import { googleAdsRoutes } from './routes/google-ads.js'
 import { utmDictionaryRoutes } from './routes/utm-dictionary.js'
 import { hubspotRoutes } from './routes/hubspot.js'
 import { crmWebhookRoutes } from './routes/crm-webhook.js'
+import { workspacesRoutes } from './routes/workspaces.js'
 import { env } from './config/env.js'
 
 const app = Fastify({
@@ -81,6 +82,7 @@ await app.register(googleAdsRoutes, { prefix: '/api/v1/auth' })
 await app.register(utmDictionaryRoutes, { prefix: '/api/v1/utm-dictionary' })
 await app.register(hubspotRoutes, { prefix: '/api/v1/crm/hubspot' })
 await app.register(crmWebhookRoutes, { prefix: '/api/v1/crm/webhook' })
+await app.register(workspacesRoutes, { prefix: '/api/v1/workspaces' })
 
 // Global error handler
 app.setErrorHandler((error, request, reply) => {

@@ -10,7 +10,7 @@ export function LoginForm() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const setTokens = useAuthStore((s) => s.setTokens)
+  const { setTokens, setWorkspaces } = useAuthStore()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,7 +31,8 @@ export function LoginForm() {
         return
       }
 
-      setTokens(data.data.accessToken)
+      setTokens(data.data.accessToken, data.data.workspaces)
+      if (data.data.workspaces) setWorkspaces(data.data.workspaces)
       router.push('/dashboard')
       router.refresh()
     } catch {

@@ -8,6 +8,7 @@ import {
   timestamp,
   inet,
   pgEnum,
+  unique,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
@@ -45,6 +46,21 @@ export const users = pgTable('users', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
+// WORKSPACE MEMBERS — links users to workspaces (multi-workspace support)
+export const workspaceMembers = pgTable('workspace_members', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id')
+    .notNull()
+    .references(() => tenants.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  role: userRoleEnum('role').notNull().default('editor'),
+  invitedBy: uuid('invited_by').references(() => users.id, { onDelete: 'set null' }),
+  joinedAt: timestamp('joined_at', { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [unique('wm_tenant_user_unique').on(t.tenantId, t.userId)])
+
 // AUDIT LOGS (append-only, immutable)
 export const auditLogs = pgTable('audit_logs', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -75,11 +91,18 @@ export const consentRecords = pgTable('consent_records', {
 // Relations
 export const tenantsRelations = relations(tenants, ({ many }) => ({
   users: many(users),
+  members: many(workspaceMembers),
 }))
 
-export const usersRelations = relations(users, ({ one }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   tenant: one(tenants, {
     fields: [users.tenantId],
     references: [tenants.id],
   }),
+  workspaceMemberships: many(workspaceMembers),
+}))
+
+export const workspaceMembersRelations = relations(workspaceMembers, ({ one }) => ({
+  tenant: one(tenants, { fields: [workspaceMembers.tenantId], references: [tenants.id] }),
+  user: one(users, { fields: [workspaceMembers.userId], references: [users.id] }),
 }))
