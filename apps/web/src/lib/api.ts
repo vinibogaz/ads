@@ -63,6 +63,9 @@ export async function apiRequest<T = unknown>(
     throw Object.assign(new Error(err.message ?? 'Request failed'), { status: res.status, ...err })
   }
 
+  // 204 No Content — return empty data without parsing body
+  if (res.status === 204) return { data: null } as unknown as { data: T }
+
   return res.json() as Promise<{ data: T }>
 }
 

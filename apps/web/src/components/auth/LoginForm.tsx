@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuthStore } from '@/store/auth'
+import { api } from '@/lib/api'
 
 export function LoginForm() {
   const [email, setEmail] = useState('')
@@ -10,6 +11,8 @@ export function LoginForm() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const inviteToken = searchParams.get('invite')
   const { setTokens, setWorkspaces } = useAuthStore()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,6 +36,18 @@ export function LoginForm() {
 
       setTokens(data.data.accessToken, data.data.workspaces)
       if (data.data.workspaces) setWorkspaces(data.data.workspaces)
+
+      // Accept invite if coming from invite link
+      if (inviteToken) {
+        try {
+          const acceptRes = await api<{ workspaces: any[] }>('/workspaces/accept-invite', {
+            method: 'POST',
+            body: JSON.stringify({ token: inviteToken }),
+          })
+          setWorkspaces(acceptRes.data.workspaces)
+        } catch { /* ignore — might already be member */ }
+      }
+
       router.push('/dashboard')
       router.refresh()
     } catch {

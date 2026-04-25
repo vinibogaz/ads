@@ -81,10 +81,16 @@ export function WorkspaceMembersView() {
     onError: (e: any) => setInviteError(e.message ?? 'Erro ao convidar'),
   })
 
+  const [cancelError, setCancelError] = useState('')
+
   const cancelInvite = useMutation({
     mutationFn: (inviteId: string) =>
       api(`/workspaces/${user?.tid}/invites/${inviteId}`, { method: 'DELETE' }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workspace-members'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workspace-members'] })
+      setCancelError('')
+    },
+    onError: (e: any) => setCancelError(e.message ?? 'Erro ao cancelar convite'),
   })
 
   const updateRole = useMutation({
@@ -102,9 +108,21 @@ export function WorkspaceMembersView() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workspace-members'] }),
   })
 
-  const copyInvite = () => {
+  const copyInvite = async () => {
     if (!inviteUrl) return
-    navigator.clipboard.writeText(inviteUrl)
+    try {
+      await navigator.clipboard.writeText(inviteUrl)
+    } catch {
+      // Fallback for browsers without clipboard API
+      const el = document.createElement('textarea')
+      el.value = inviteUrl
+      el.style.position = 'fixed'
+      el.style.opacity = '0'
+      document.body.appendChild(el)
+      el.select()
+      document.execCommand('copy')
+      document.body.removeChild(el)
+    }
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -148,6 +166,7 @@ export function WorkspaceMembersView() {
             </button>
           </div>
           {inviteError && <p className="text-xs text-red-400">{inviteError}</p>}
+      {cancelError && <p className="text-xs text-red-400 mt-1">{cancelError}</p>}
 
           {inviteUrl && (
             <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-orf-sm p-3 space-y-2">
