@@ -378,7 +378,8 @@ export const googleSheetsIntegrations = pgTable(
     name: varchar('name', { length: 255 }).notNull(),
     spreadsheetId: varchar('spreadsheet_id', { length: 255 }).notNull(),
     sheetName: varchar('sheet_name', { length: 255 }).notNull().default('Sheet1'),
-    fieldMapping: jsonb('field_mapping').notNull().default({}), // { lead_field: column_letter }
+    fieldMapping: jsonb('field_mapping').notNull().default({}), // { lead_field: column_letter } — legacy single tab
+    sheetConfigs: jsonb('sheet_configs'), // [{ sheetName, fieldMapping }] — multi-tab (overrides fieldMapping when set)
     credentials: jsonb('credentials').notNull().default({}), // OAuth tokens
     googleEmail: varchar('google_email', { length: 255 }), // connected Google account email
     spreadsheetTitle: varchar('spreadsheet_title', { length: 255 }), // friendly title of the sheet

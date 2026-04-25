@@ -198,6 +198,12 @@ function GoogleSheetsIcon() {
   )
 }
 
+const ALL_LEAD_FIELDS = [
+  'name', 'email', 'phone', 'company', 'status',
+  'utmSource', 'utmMedium', 'utmCampaign', 'utmContent', 'utmTerm',
+  'gclid', 'fbclid', 'value', 'mrr', 'implantation', 'closedAt', 'createdAt',
+]
+
 const LEAD_FIELD_LABELS: Record<string, string> = {
   name: 'Nome', email: 'E-mail', phone: 'Telefone', company: 'Empresa',
   status: 'Status', utmSource: 'UTM Source', utmMedium: 'UTM Medium',
@@ -207,22 +213,131 @@ const LEAD_FIELD_LABELS: Record<string, string> = {
   closedAt: 'Data de Fechamento', createdAt: 'Data de Entrada',
 }
 
-const DEFAULT_FIELD_MAPPING: Record<string, string> = {
-  name: 'A', email: 'B', phone: 'C', company: 'D',
-  status: 'E', utmSource: 'F', utmMedium: 'G', utmCampaign: 'H',
-  value: 'I', mrr: 'J', closedAt: 'K', createdAt: 'L',
-  utmContent: '', utmTerm: '', gclid: '', fbclid: '', implantation: '',
+type SheetConfig = { sheetName: string; fieldMapping: Record<string, string> }
+
+const DEFAULT_CONFIG: SheetConfig = {
+  sheetName: '',
+  fieldMapping: {
+    name: 'A', email: 'B', phone: 'C', company: 'D',
+    utmSource: 'E', utmMedium: 'F', utmCampaign: 'G',
+    value: 'H', mrr: 'I', closedAt: 'J', createdAt: 'K',
+  },
+}
+
+function FieldMappingEditor({
+  config,
+  index,
+  sheetTabs,
+  onUpdate,
+  onRemove,
+  canRemove,
+}: {
+  config: SheetConfig
+  index: number
+  sheetTabs: { id: number; title: string }[]
+  onUpdate: (idx: number, c: SheetConfig) => void
+  onRemove: (idx: number) => void
+  canRemove: boolean
+}) {
+  const [open, setOpen] = useState(index === 0)
+  const activeCount = Object.values(config.fieldMapping).filter(Boolean).length
+
+  return (
+    <div className="border border-orf-border rounded-orf-sm overflow-hidden">
+      <div className="flex items-center bg-orf-surface-2">
+        <button
+          type="button"
+          onClick={() => setOpen(v => !v)}
+          className="flex-1 flex items-center justify-between px-3 py-2.5 text-xs font-medium text-orf-text-2 hover:text-orf-text transition-colors text-left"
+        >
+          <span>
+            {config.sheetName ? (
+              <><span className="text-orf-text font-semibold">{config.sheetName}</span> · {activeCount} campo{activeCount !== 1 ? 's' : ''}</>
+            ) : (
+              `Aba ${index + 1} — selecione abaixo`
+            )}
+          </span>
+          <span className="text-orf-text-3 ml-2">{open ? '▲' : '▼'}</span>
+        </button>
+        {canRemove && (
+          <button
+            type="button"
+            onClick={() => onRemove(index)}
+            className="px-3 py-2.5 text-red-400 hover:text-red-600 text-xs"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+
+      {open && (
+        <div className="p-3 space-y-3">
+          {/* Tab selector */}
+          {sheetTabs.length > 0 ? (
+            <div>
+              <label className="block text-xs font-medium text-orf-text-2 mb-1">Aba da planilha</label>
+              <select
+                value={config.sheetName}
+                onChange={(e) => onUpdate(index, { ...config, sheetName: e.target.value })}
+                className="w-full px-3 py-1.5 bg-orf-surface border border-orf-border rounded-orf-sm text-sm text-orf-text focus:outline-none focus:border-orf-primary"
+              >
+                <option value="">— selecione —</option>
+                {sheetTabs.map((t) => <option key={t.id} value={t.title}>{t.title}</option>)}
+              </select>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-xs font-medium text-orf-text-2 mb-1">Nome da aba</label>
+              <input
+                type="text"
+                placeholder="Ex: Sheet1, Leads, Vendas"
+                value={config.sheetName}
+                onChange={(e) => onUpdate(index, { ...config, sheetName: e.target.value })}
+                className="w-full px-3 py-1.5 bg-orf-surface border border-orf-border rounded-orf-sm text-sm text-orf-text placeholder:text-orf-text-3 focus:outline-none focus:border-orf-primary"
+              />
+            </div>
+          )}
+
+          {/* Field → column mapping */}
+          <div>
+            <p className="text-xs font-medium text-orf-text-2 mb-2">Campos → Colunas <span className="text-orf-text-3 font-normal">(deixe em branco para não exportar)</span></p>
+            <div className="grid grid-cols-[1fr_52px] gap-x-2 gap-y-1">
+              <span className="text-xs text-orf-text-3 font-medium">Campo</span>
+              <span className="text-xs text-orf-text-3 font-medium text-center">Col.</span>
+              {ALL_LEAD_FIELDS.map((field) => (
+                <>
+                  <span key={`${field}-${index}-label`} className="text-xs text-orf-text py-0.5">{LEAD_FIELD_LABELS[field] ?? field}</span>
+                  <input
+                    key={`${field}-${index}-input`}
+                    type="text"
+                    maxLength={2}
+                    placeholder="—"
+                    value={config.fieldMapping[field] ?? ''}
+                    onChange={(e) => {
+                      const val = e.target.value.toUpperCase()
+                      onUpdate(index, { ...config, fieldMapping: { ...config.fieldMapping, [field]: val } })
+                    }}
+                    className="w-full px-2 py-0.5 bg-orf-surface border border-orf-border rounded text-xs text-center text-orf-text font-mono uppercase focus:outline-none focus:border-orf-primary"
+                  />
+                </>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 function GoogleSheetsSection({ onGoogleSetup }: { onGoogleSetup?: string | null }) {
   const queryClient = useQueryClient()
   const [setupId, setSetupId] = useState<string | null>(null)
   useEffect(() => { if (onGoogleSetup) setSetupId(onGoogleSetup) }, [onGoogleSetup])
-  const [setupForm, setSetupForm] = useState({ name: '', spreadsheetUrl: '', sheetName: '' })
-  const [fieldMapping, setFieldMapping] = useState<Record<string, string>>(DEFAULT_FIELD_MAPPING)
-  const [showMapping, setShowMapping] = useState(false)
+  const [name, setName] = useState('')
+  const [spreadsheetUrl, setSpreadsheetUrl] = useState('')
   const [sheetTabs, setSheetTabs] = useState<{ id: number; title: string }[]>([])
   const [loadingTabs, setLoadingTabs] = useState(false)
+  const [sheetConfigs, setSheetConfigs] = useState<SheetConfig[]>([{ ...DEFAULT_CONFIG }])
   const [setupError, setSetupError] = useState('')
   const [connectingGoogle, setConnectingGoogle] = useState(false)
   const [syncingId, setSyncingId] = useState<string | null>(null)
@@ -235,11 +350,10 @@ function GoogleSheetsSection({ onGoogleSetup }: { onGoogleSetup?: string | null 
   const sheets: GSheet[] = data?.data ?? []
   const activeSheets = sheets.filter((s) => s.status === 'active')
 
-  // When setup modal opens, pre-fill name from pending record
   useEffect(() => {
     if (setupId) {
       const pending = sheets.find((s) => s.id === setupId)
-      if (pending) setSetupForm(f => ({ ...f, name: pending.googleEmail ? `Leads — ${pending.googleEmail.split('@')[0]}` : '' }))
+      if (pending) setName(pending.googleEmail ? `Leads — ${pending.googleEmail.split('@')[0]}` : '')
     }
   }, [setupId, sheets])
 
@@ -248,20 +362,17 @@ function GoogleSheetsSection({ onGoogleSetup }: { onGoogleSetup?: string | null 
     try {
       const res = await api<{ url: string }>('/auth/google/url')
       window.location.href = res.data.url
-    } catch (e: any) {
-      setConnectingGoogle(false)
-    }
+    } catch { setConnectingGoogle(false) }
   }
 
-  // Extract spreadsheet ID from URL or raw ID
   function extractSpreadsheetId(input: string): string {
     const match = input.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)
     return match ? match[1]! : input.trim()
   }
 
   const handleUrlBlur = async () => {
-    if (!setupId || !setupForm.spreadsheetUrl) return
-    const spreadsheetId = extractSpreadsheetId(setupForm.spreadsheetUrl)
+    if (!setupId || !spreadsheetUrl) return
+    const spreadsheetId = extractSpreadsheetId(spreadsheetUrl)
     setLoadingTabs(true)
     setSetupError('')
     try {
@@ -269,11 +380,11 @@ function GoogleSheetsSection({ onGoogleSetup }: { onGoogleSetup?: string | null 
         `/auth/google/spreadsheet-meta?spreadsheetId=${spreadsheetId}&integrationId=${setupId}`
       )
       setSheetTabs(res.data.sheets)
-      setSetupForm(f => ({
-        ...f,
-        sheetName: res.data.sheets[0]?.title ?? 'Sheet1',
-        name: f.name || res.data.title,
-      }))
+      if (!name) setName(res.data.title)
+      // Pre-fill first tab with first sheet name
+      if (res.data.sheets[0]) {
+        setSheetConfigs(prev => prev.map((c, i) => i === 0 ? { ...c, sheetName: res.data.sheets[0]!.title } : c))
+      }
     } catch (e: any) {
       setSetupError(e.message ?? 'Não foi possível acessar a planilha')
       setSheetTabs([])
@@ -282,30 +393,41 @@ function GoogleSheetsSection({ onGoogleSetup }: { onGoogleSetup?: string | null 
     }
   }
 
+  const updateConfig = (idx: number, c: SheetConfig) =>
+    setSheetConfigs(prev => prev.map((x, i) => i === idx ? c : x))
+
+  const removeConfig = (idx: number) =>
+    setSheetConfigs(prev => prev.filter((_, i) => i !== idx))
+
+  const addConfig = () =>
+    setSheetConfigs(prev => [...prev, { sheetName: '', fieldMapping: {} }])
+
   const completeSetup = useMutation({
     mutationFn: () => {
-      const spreadsheetId = extractSpreadsheetId(setupForm.spreadsheetUrl)
-      // Only include fields that have a column assigned
-      const activeMapping = Object.fromEntries(
-        Object.entries(fieldMapping).filter(([, col]) => col.trim() !== '')
-      )
+      const spreadsheetId = extractSpreadsheetId(spreadsheetUrl)
+      const validConfigs = sheetConfigs
+        .filter((c) => c.sheetName.trim())
+        .map((c) => ({
+          sheetName: c.sheetName,
+          fieldMapping: Object.fromEntries(Object.entries(c.fieldMapping).filter(([, v]) => v.trim())),
+        }))
+      if (validConfigs.length === 0) throw new Error('Configure pelo menos uma aba com nome')
       return api(`/google-sheets/${setupId}`, {
         method: 'PATCH',
         body: JSON.stringify({
-          name: setupForm.name,
+          name,
           spreadsheetId,
-          sheetName: setupForm.sheetName,
-          spreadsheetTitle: setupForm.name,
-          fieldMapping: activeMapping,
+          spreadsheetTitle: name,
+          sheetConfigs: validConfigs,
         }),
       })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['google-sheets'] })
       setSetupId(null)
-      setSetupForm({ name: '', spreadsheetUrl: '', sheetName: '' })
-      setFieldMapping(DEFAULT_FIELD_MAPPING)
-      setShowMapping(false)
+      setName('')
+      setSpreadsheetUrl('')
+      setSheetConfigs([{ ...DEFAULT_CONFIG }])
       setSheetTabs([])
       setSetupError('')
       window.history.replaceState({}, '', '/integrations')
@@ -322,8 +444,11 @@ function GoogleSheetsSection({ onGoogleSetup }: { onGoogleSetup?: string | null 
     setSyncingId(id)
     setSyncMsg(null)
     try {
-      const res = await api<{ synced: number }>(`/google-sheets/${id}/sync`, { method: 'POST' })
-      setSyncMsg(`✓ ${res.data.synced} leads sincronizados`)
+      const res = await api<{ tabs: { sheetName: string; synced: number }[]; totalLeads: number }>(
+        `/google-sheets/${id}/sync`, { method: 'POST' }
+      )
+      const tabsSummary = res.data.tabs.map((t) => `${t.sheetName}: ${t.synced}`).join(' · ')
+      setSyncMsg(`✓ ${res.data.totalLeads} leads → ${tabsSummary}`)
     } catch (e: any) {
       setSyncMsg(`Erro: ${e.message}`)
     } finally {
@@ -333,14 +458,11 @@ function GoogleSheetsSection({ onGoogleSetup }: { onGoogleSetup?: string | null 
 
   return (
     <section className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-semibold text-orf-text">Google Sheets</h2>
-          <p className="text-xs text-orf-text-3 mt-0.5">Exporte leads para uma planilha automaticamente</p>
-        </div>
+      <div>
+        <h2 className="text-sm font-semibold text-orf-text">Google Sheets</h2>
+        <p className="text-xs text-orf-text-3 mt-0.5">Exporte leads para uma planilha — configure múltiplas abas com campos diferentes</p>
       </div>
 
-      {/* Connect card */}
       <div className="bg-orf-surface border border-orf-border rounded-orf p-5">
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 rounded-orf-sm bg-white border border-orf-border flex items-center justify-center shrink-0">
@@ -348,12 +470,12 @@ function GoogleSheetsSection({ onGoogleSetup }: { onGoogleSetup?: string | null 
           </div>
           <div className="flex-1">
             <p className="text-sm font-medium text-orf-text">Google Sheets</p>
-            <p className="text-xs text-orf-text-2">Conecte sua conta Google e escolha qual planilha receber os leads</p>
+            <p className="text-xs text-orf-text-2">Conecte sua conta Google e configure quais campos vão para cada aba</p>
           </div>
           <button
             onClick={handleConnectGoogle}
             disabled={connectingGoogle}
-            className="px-4 py-2 bg-white border border-orf-border text-orf-text rounded-orf-sm text-xs font-medium hover:bg-orf-surface-2 disabled:opacity-60 transition-colors whitespace-nowrap flex items-center gap-2"
+            className="px-4 py-2 bg-white border border-orf-border text-orf-text rounded-orf-sm text-xs font-medium hover:bg-orf-surface-2 disabled:opacity-60 transition-colors whitespace-nowrap"
           >
             {connectingGoogle ? 'Redirecionando...' : '+ Conectar Google'}
           </button>
@@ -370,97 +492,85 @@ function GoogleSheetsSection({ onGoogleSetup }: { onGoogleSetup?: string | null 
         <div className="py-4 text-center text-sm text-orf-text-2">Carregando...</div>
       ) : activeSheets.length > 0 && (
         <div className="grid grid-cols-2 gap-4">
-          {activeSheets.map((s) => (
-            <div key={s.id} className="bg-orf-surface border border-orf-border rounded-orf p-4">
-              <div className="flex items-start justify-between mb-2">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-orf-text truncate">{s.spreadsheetTitle || s.name}</p>
-                  {s.googleEmail && <p className="text-xs text-orf-text-3 mt-0.5">{s.googleEmail}</p>}
-                  <p className="text-xs text-orf-text-3">Aba: {s.sheetName}</p>
-                  {s.lastSyncAt && <p className="text-xs text-orf-text-3">Sync: {new Date(s.lastSyncAt).toLocaleString('pt-BR')}</p>}
+          {activeSheets.map((s) => {
+            const configs = (s as any).sheetConfigs as SheetConfig[] | undefined
+            const tabCount = configs?.length ?? 1
+            return (
+              <div key={s.id} className="bg-orf-surface border border-orf-border rounded-orf p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-orf-text truncate">{s.spreadsheetTitle || s.name}</p>
+                    {s.googleEmail && <p className="text-xs text-orf-text-3 mt-0.5">{s.googleEmail}</p>}
+                    <p className="text-xs text-orf-text-3">
+                      {tabCount > 1 ? `${tabCount} abas configuradas` : `Aba: ${s.sheetName}`}
+                    </p>
+                    {s.lastSyncAt && <p className="text-xs text-orf-text-3">Sync: {new Date(s.lastSyncAt).toLocaleString('pt-BR')}</p>}
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 shrink-0 ml-2">Ativo</span>
                 </div>
-                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 shrink-0 ml-2">Ativo</span>
+                <div className="flex items-center gap-3 border-t border-orf-border pt-3">
+                  <button onClick={() => sync(s.id)} disabled={syncingId === s.id} className="text-xs text-orf-primary hover:underline disabled:opacity-50">
+                    {syncingId === s.id ? 'Sincronizando...' : 'Sincronizar'}
+                  </button>
+                  <button onClick={() => remove.mutate(s.id)} className="text-xs text-red-400 hover:text-red-600">Remover</button>
+                </div>
               </div>
-              <div className="flex items-center gap-3 border-t border-orf-border pt-3">
-                <button onClick={() => sync(s.id)} disabled={syncingId === s.id} className="text-xs text-orf-primary hover:underline disabled:opacity-50">
-                  {syncingId === s.id ? 'Sincronizando...' : 'Sincronizar leads'}
-                </button>
-                <button onClick={() => remove.mutate(s.id)} className="text-xs text-red-400 hover:text-red-600">Remover</button>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
-      {/* Setup modal — shown after OAuth callback */}
+      {/* Setup modal */}
       {setupId && (
         <Modal title="Configurar Google Sheets" onClose={() => {
           remove.mutate(setupId)
           setSetupId(null)
           window.history.replaceState({}, '', '/integrations')
         }}>
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
             <div className="bg-emerald-50 border border-emerald-200 rounded-orf-sm p-3 text-xs text-emerald-700">
-              ✓ Conta Google conectada. Agora selecione a planilha que receberá os leads.
+              ✓ Conta Google conectada. Configure a planilha e as abas.
             </div>
+
             <div>
               <label className="block text-xs font-medium text-orf-text-2 mb-1.5">URL ou ID da planilha</label>
               <input
                 type="text"
-                placeholder="https://docs.google.com/spreadsheets/d/... ou só o ID"
-                value={setupForm.spreadsheetUrl}
-                onChange={(e) => setSetupForm(f => ({ ...f, spreadsheetUrl: e.target.value }))}
+                placeholder="https://docs.google.com/spreadsheets/d/..."
+                value={spreadsheetUrl}
+                onChange={(e) => setSpreadsheetUrl(e.target.value)}
                 onBlur={handleUrlBlur}
                 className="w-full px-3 py-2 bg-orf-surface-2 border border-orf-border rounded-orf-sm text-sm text-orf-text placeholder:text-orf-text-3 focus:outline-none focus:border-orf-primary"
               />
               {loadingTabs && <p className="text-xs text-orf-text-3 mt-1">Carregando abas...</p>}
-            </div>
-            {sheetTabs.length > 0 && (
-              <div>
-                <label className="block text-xs font-medium text-orf-text-2 mb-1.5">Aba de destino</label>
-                <select
-                  value={setupForm.sheetName}
-                  onChange={(e) => setSetupForm(f => ({ ...f, sheetName: e.target.value }))}
-                  className="w-full px-3 py-2 bg-orf-surface-2 border border-orf-border rounded-orf-sm text-sm text-orf-text focus:outline-none focus:border-orf-primary"
-                >
-                  {sheetTabs.map((t) => <option key={t.id} value={t.title}>{t.title}</option>)}
-                </select>
-              </div>
-            )}
-
-            {/* Field mapping */}
-            <div className="border border-orf-border rounded-orf-sm overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setShowMapping(v => !v)}
-                className="w-full flex items-center justify-between px-3 py-2.5 bg-orf-surface-2 text-xs font-medium text-orf-text-2 hover:text-orf-text transition-colors"
-              >
-                <span>Mapeamento de colunas</span>
-                <span className="text-orf-text-3">{showMapping ? '▲' : '▼'} {Object.values(fieldMapping).filter(Boolean).length} campos ativos</span>
-              </button>
-              {showMapping && (
-                <div className="p-3 space-y-1">
-                  <p className="text-xs text-orf-text-3 mb-2">Defina qual coluna da planilha receberá cada campo. Deixe em branco para não exportar.</p>
-                  <div className="grid grid-cols-[1fr_56px] gap-x-2 gap-y-1.5">
-                    <span className="text-xs font-medium text-orf-text-3 uppercase tracking-wide">Campo</span>
-                    <span className="text-xs font-medium text-orf-text-3 uppercase tracking-wide text-center">Col.</span>
-                    {Object.entries(LEAD_FIELD_LABELS).map(([field, label]) => (
-                      <>
-                        <span key={`${field}-label`} className="text-xs text-orf-text py-1">{label}</span>
-                        <input
-                          key={`${field}-input`}
-                          type="text"
-                          maxLength={2}
-                          placeholder="—"
-                          value={fieldMapping[field] ?? ''}
-                          onChange={(e) => setFieldMapping(m => ({ ...m, [field]: e.target.value.toUpperCase() }))}
-                          className="w-full px-2 py-1 bg-orf-surface border border-orf-border rounded text-xs text-center text-orf-text font-mono uppercase focus:outline-none focus:border-orf-primary"
-                        />
-                      </>
-                    ))}
-                  </div>
-                </div>
+              {sheetTabs.length > 0 && (
+                <p className="text-xs text-emerald-600 mt-1">✓ {sheetTabs.length} aba{sheetTabs.length !== 1 ? 's' : ''} encontrada{sheetTabs.length !== 1 ? 's' : ''}: {sheetTabs.map((t) => t.title).join(', ')}</p>
               )}
+            </div>
+
+            {/* Multi-tab configuration */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-orf-text-2 uppercase tracking-wide">Abas configuradas</p>
+                <button
+                  type="button"
+                  onClick={addConfig}
+                  className="text-xs text-orf-primary hover:underline"
+                >
+                  + Adicionar aba
+                </button>
+              </div>
+              {sheetConfigs.map((cfg, idx) => (
+                <FieldMappingEditor
+                  key={idx}
+                  config={cfg}
+                  index={idx}
+                  sheetTabs={sheetTabs}
+                  onUpdate={updateConfig}
+                  onRemove={removeConfig}
+                  canRemove={sheetConfigs.length > 1}
+                />
+              ))}
             </div>
 
             <div>
@@ -468,8 +578,8 @@ function GoogleSheetsSection({ onGoogleSetup }: { onGoogleSetup?: string | null 
               <input
                 type="text"
                 placeholder="Ex: Leads Cliente XYZ"
-                value={setupForm.name}
-                onChange={(e) => setSetupForm(f => ({ ...f, name: e.target.value }))}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 className="w-full px-3 py-2 bg-orf-surface-2 border border-orf-border rounded-orf-sm text-sm text-orf-text placeholder:text-orf-text-3 focus:outline-none focus:border-orf-primary"
               />
             </div>
@@ -483,7 +593,7 @@ function GoogleSheetsSection({ onGoogleSetup }: { onGoogleSetup?: string | null 
               </button>
               <button
                 onClick={() => completeSetup.mutate()}
-                disabled={!setupForm.name || !setupForm.spreadsheetUrl || completeSetup.isPending}
+                disabled={!name || !spreadsheetUrl || completeSetup.isPending}
                 className="flex-1 px-4 py-2 bg-orf-primary text-white rounded-orf-sm text-sm font-medium hover:bg-orf-primary/90 disabled:opacity-50"
               >
                 {completeSetup.isPending ? 'Salvando...' : 'Salvar integração'}
