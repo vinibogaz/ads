@@ -107,7 +107,7 @@ export async function crmWebhookRoutes(app: FastifyInstance) {
           })
           .where(eq(leads.id, existing.id))
           .returning()
-        return reply.send({ data: { action: 'updated', id: updated.id } })
+        return reply.send({ data: { action: 'updated', id: updated!.id } })
       }
     }
 
@@ -122,7 +122,7 @@ export async function crmWebhookRoutes(app: FastifyInstance) {
       implantation: implantation != null ? String(implantation) : undefined,
     }).returning()
 
-    return reply.status(201).send({ data: { action: 'created', id: lead.id } })
+    return reply.status(201).send({ data: { action: 'created', id: lead!.id } })
   })
 
   // GET /api/v1/crm/webhook/info — authenticated, returns webhook URL + secret for tenant
