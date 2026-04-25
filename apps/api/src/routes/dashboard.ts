@@ -63,7 +63,7 @@ export async function dashboardRoutes(app: FastifyInstance) {
 
     const totalPlanned = budgetRows.reduce((s, b) => s + parseFloat(b.plannedAmount), 0)
     const totalSpent = budgetRows.reduce((s, b) => s + parseFloat(b.spentAmount), 0)
-    const totalLeads = leadRows.reduce((s, r) => s + r.count, 0)
+    const crmLeads = leadRows.reduce((s, r) => s + r.count, 0)
     const qualifiedLeads = leadRows.find((r) => r.status === 'qualified')?.count ?? 0
     const wonLeads = leadRows.find((r) => r.status === 'won')?.count ?? 0
     const totalConversions = conversionRows.reduce((s, r) => s + r.count, 0)
@@ -77,6 +77,16 @@ export async function dashboardRoutes(app: FastifyInstance) {
         })
       : []
     const integrationMap = Object.fromEntries(integrationRows.map((i) => [i.id, i]))
+
+    // Total leads from Meta Ads (budget.meta.leads) — these are campaign lead conversions,
+    // shown when CRM leads aren't imported yet
+    const totalMetaLeads = budgetRows.reduce((s, b) => {
+      const m = (b.meta as any && Object.keys(b.meta as any).length > 0)
+        ? (b.meta as any)
+        : ((b.integrationId ? (integrationMap[b.integrationId]?.meta as any) : null) ?? {})
+      return s + (m.leads ?? 0)
+    }, 0)
+    const totalLeads = crmLeads > 0 ? crmLeads : totalMetaLeads
 
     // Aggregate metrics from budget.meta (per-month) with integration.meta as fallback
     const totalImpressions = budgetRows.reduce((s, b) => {
@@ -127,6 +137,8 @@ export async function dashboardRoutes(app: FastifyInstance) {
         totalBudgetPlanned: totalPlanned,
         totalBudgetSpent: totalSpent,
         totalLeads,
+        crmLeads,
+        metaLeads: totalMetaLeads,
         totalQualifiedLeads: qualifiedLeads,
         totalWon: wonLeads,
         totalConversionsSent: totalConversions,

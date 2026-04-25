@@ -196,7 +196,8 @@ export async function metaOAuthRoutes(app: FastifyInstance) {
 
     // Build URL properly to avoid encoding issues
     const insightsUrl = new URL(`${META_GRAPH_URL}/${integration.accountId}/insights`)
-    insightsUrl.searchParams.set('fields', 'spend,impressions,clicks,reach,frequency,cpm,cpc,ctr,actions')
+    // Request unique_actions for deduplicated lead counts (matches Meta Ads Manager "Results")
+    insightsUrl.searchParams.set('fields', 'spend,impressions,clicks,reach,frequency,cpm,cpc,ctr,actions,unique_actions')
     insightsUrl.searchParams.set('time_range', JSON.stringify({ since: sinceDate, until: untilDate }))
     insightsUrl.searchParams.set('access_token', creds.accessToken)
 
@@ -218,6 +219,7 @@ export async function metaOAuthRoutes(app: FastifyInstance) {
         cpc?: string
         ctr?: string
         actions?: { action_type: string; value: string }[]
+        unique_actions?: { action_type: string; value: string }[]
       }[]
     }
     const insights = insightsData.data?.[0]
@@ -228,9 +230,21 @@ export async function metaOAuthRoutes(app: FastifyInstance) {
     const ctr = parseFloat(insights?.ctr ?? '0')
     const cpm = parseFloat(insights?.cpm ?? '0')
     const cpc = parseFloat(insights?.cpc ?? '0')
-    const LEAD_ACTION_TYPES = ['lead', 'leadgen.other', 'onsite_conversion.lead_grouped', 'offsite_conversion.fb_pixel_lead']
-    const leadsCount = (insights?.actions?.filter((a) => LEAD_ACTION_TYPES.includes(a.action_type)) ?? [])
-      .reduce((sum, a) => sum + parseInt(a.value ?? '0'), 0)
+
+    // Lead count: use unique_actions to avoid double-counting across action types.
+    // Priority: 'lead' (Lead Ads primary result) → 'onsite_conversion.lead_grouped' → 'leadgen.other'
+    // unique_actions deduplicates people who triggered multiple action events.
+    const findAction = (arr: { action_type: string; value: string }[] | undefined, types: string[]) => {
+      for (const t of types) {
+        const a = arr?.find((x) => x.action_type === t)
+        if (a) return parseInt(a.value ?? '0')
+      }
+      return 0
+    }
+    const LEAD_PRIORITY = ['lead', 'onsite_conversion.lead_grouped', 'leadgen.other', 'offsite_conversion.fb_pixel_lead']
+    // Prefer unique_actions (deduplicated); fall back to actions if not present
+    const leadsCount = findAction(insights?.unique_actions, LEAD_PRIORITY)
+      || findAction(insights?.actions, LEAD_PRIORITY)
     const cpl = leadsCount > 0 ? spend / leadsCount : 0
 
     const syncedMetrics = {

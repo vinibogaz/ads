@@ -53,6 +53,8 @@ type DashboardData = {
   totalBudgetPlanned: number
   totalBudgetSpent: number
   totalLeads: number
+  crmLeads: number
+  metaLeads: number
   totalQualifiedLeads: number
   totalWon: number
   totalConversionsSent: number
@@ -207,7 +209,14 @@ export function DashboardView() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KPI label="Budget Planejado" value={fmt(totalPlanned)} sub={`${totalPct}% utilizado`} />
         <KPI label="Budget Gasto" value={fmt(totalSpent)} sub={`Saldo: ${fmt(totalRemaining)}`} color={totalSpent > totalPlanned ? 'text-red-400' : 'text-orf-text'} />
-        <KPI label="Total de Leads" value={fmtN(totalLeads)} sub={`${d?.totalQualifiedLeads ?? 0} qualificados · ${d?.totalWon ?? 0} fechados`} color="text-orf-primary" />
+        <KPI
+          label="Total de Leads"
+          value={fmtN(totalLeads)}
+          sub={d && d.crmLeads === 0 && d.metaLeads > 0
+            ? `Leads Meta Ads · ${d.totalQualifiedLeads} qualificados`
+            : `${d?.totalQualifiedLeads ?? 0} qualificados · ${d?.totalWon ?? 0} fechados`}
+          color="text-orf-primary"
+        />
         <KPI label="CPL Médio" value={(d?.cpl ?? 0) > 0 ? fmt(d!.cpl) : '—'} sub="Custo por lead" />
       </div>
 
