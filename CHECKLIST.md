@@ -102,7 +102,9 @@
 - ✅ Mapeamento de campos com colunas (A, B, C…)
 - ✅ Campos de receita no mapeamento
 - ✅ Sync completo (limpa e reescreve a aba)
-- ❌ Multi-aba: escolher campos diferentes por aba livremente
+- ✅ Multi-aba: configurar campos diferentes por aba livremente (+ Adicionar aba)
+- ✅ Header em português na planilha
+- ✅ Sync de múltiplas abas em paralelo
 
 ---
 
