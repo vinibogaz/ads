@@ -292,7 +292,7 @@ export async function hubspotRoutes(app: FastifyInstance) {
       stages: (p.stages ?? []).map((s: any) => ({ id: s.id, label: s.label, probability: s.metadata?.probability })),
     }))
 
-    return reply.send({ data: pipelines })
+    return reply.send({ data: { pipelines } })
   })
 
   // PATCH /api/v1/crm/hubspot/mapping/:id — save funnel stage mapping

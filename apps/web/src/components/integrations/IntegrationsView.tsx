@@ -202,13 +202,16 @@ const LEAD_FIELD_LABELS: Record<string, string> = {
   name: 'Nome', email: 'E-mail', phone: 'Telefone', company: 'Empresa',
   status: 'Status', utmSource: 'UTM Source', utmMedium: 'UTM Medium',
   utmCampaign: 'UTM Campaign', utmContent: 'UTM Content', utmTerm: 'UTM Term',
-  createdAt: 'Data de criação',
+  gclid: 'GCLID (Google)', fbclid: 'FBCLID (Meta)',
+  value: 'Valor da Venda', mrr: 'MRR', implantation: 'Implantação',
+  closedAt: 'Data de Fechamento', createdAt: 'Data de Entrada',
 }
 
 const DEFAULT_FIELD_MAPPING: Record<string, string> = {
   name: 'A', email: 'B', phone: 'C', company: 'D',
   status: 'E', utmSource: 'F', utmMedium: 'G', utmCampaign: 'H',
-  utmContent: '', utmTerm: '', createdAt: 'I',
+  value: 'I', mrr: 'J', closedAt: 'K', createdAt: 'L',
+  utmContent: '', utmTerm: '', gclid: '', fbclid: '', implantation: '',
 }
 
 function GoogleSheetsSection({ onGoogleSetup }: { onGoogleSetup?: string | null }) {

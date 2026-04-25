@@ -165,7 +165,8 @@ export async function googleOAuthRoutes(app: FastifyInstance) {
         sheetName: 'Sheet1',
         fieldMapping: {
           name: 'A', email: 'B', phone: 'C', company: 'D',
-          status: 'E', utmSource: 'F', utmMedium: 'G', utmCampaign: 'H', createdAt: 'I',
+          status: 'E', utmSource: 'F', utmMedium: 'G', utmCampaign: 'H',
+          value: 'I', mrr: 'J', closedAt: 'K', createdAt: 'L',
         },
         credentials: {
           accessToken: tokens.accessToken,
