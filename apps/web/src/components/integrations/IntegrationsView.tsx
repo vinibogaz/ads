@@ -534,15 +534,24 @@ function GoogleSheetsSection({ onGoogleSetup }: { onGoogleSetup?: string | null 
 
             <div>
               <label className="block text-xs font-medium text-orf-text-2 mb-1.5">URL ou ID da planilha</label>
-              <input
-                type="text"
-                placeholder="https://docs.google.com/spreadsheets/d/..."
-                value={spreadsheetUrl}
-                onChange={(e) => setSpreadsheetUrl(e.target.value)}
-                onBlur={handleUrlBlur}
-                className="w-full px-3 py-2 bg-orf-surface-2 border border-orf-border rounded-orf-sm text-sm text-orf-text placeholder:text-orf-text-3 focus:outline-none focus:border-orf-primary"
-              />
-              {loadingTabs && <p className="text-xs text-orf-text-3 mt-1">Carregando abas...</p>}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="https://docs.google.com/spreadsheets/d/..."
+                  value={spreadsheetUrl}
+                  onChange={(e) => setSpreadsheetUrl(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleUrlBlur()}
+                  className="flex-1 px-3 py-2 bg-orf-surface-2 border border-orf-border rounded-orf-sm text-sm text-orf-text placeholder:text-orf-text-3 focus:outline-none focus:border-orf-primary"
+                />
+                <button
+                  type="button"
+                  onClick={handleUrlBlur}
+                  disabled={!spreadsheetUrl.trim() || loadingTabs}
+                  className="px-3 py-2 bg-orf-primary text-white rounded-orf-sm text-xs font-medium hover:bg-orf-primary/90 disabled:opacity-50 whitespace-nowrap"
+                >
+                  {loadingTabs ? '...' : 'Carregar abas'}
+                </button>
+              </div>
               {sheetTabs.length > 0 && (
                 <p className="text-xs text-emerald-600 mt-1">✓ {sheetTabs.length} aba{sheetTabs.length !== 1 ? 's' : ''} encontrada{sheetTabs.length !== 1 ? 's' : ''}: {sheetTabs.map((t) => t.title).join(', ')}</p>
               )}
