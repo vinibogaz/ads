@@ -231,20 +231,26 @@ export async function metaOAuthRoutes(app: FastifyInstance) {
     const cpm = parseFloat(insights?.cpm ?? '0')
     const cpc = parseFloat(insights?.cpc ?? '0')
 
-    // Lead count: use unique_actions to avoid double-counting across action types.
-    // Priority: 'lead' (Lead Ads primary result) → 'onsite_conversion.lead_grouped' → 'leadgen.other'
-    // unique_actions deduplicates people who triggered multiple action events.
-    const findAction = (arr: { action_type: string; value: string }[] | undefined, types: string[]) => {
-      for (const t of types) {
-        const a = arr?.find((x) => x.action_type === t)
-        if (a) return parseInt(a.value ?? '0')
-      }
-      return 0
+    // Separate lead counts by source type — matches Meta Ads Manager display:
+    // - Lead Ad (formulário nativo): 'lead' or 'onsite_conversion.lead_grouped'
+    // - LP/Site (pixel): 'offsite_conversion.fb_pixel_lead'
+    // Use unique_actions for deduplicated counts (one person = one conversion)
+    const findAction = (arr: { action_type: string; value: string }[] | undefined, type: string) => {
+      const a = arr?.find((x) => x.action_type === type)
+      return a ? parseInt(a.value ?? '0') : 0
     }
-    const LEAD_PRIORITY = ['lead', 'onsite_conversion.lead_grouped', 'leadgen.other', 'offsite_conversion.fb_pixel_lead']
-    // Prefer unique_actions (deduplicated); fall back to actions if not present
-    const leadsCount = findAction(insights?.unique_actions, LEAD_PRIORITY)
-      || findAction(insights?.actions, LEAD_PRIORITY)
+    const ua = insights?.unique_actions
+    const ac = insights?.actions
+
+    // Lead Ad: native form submissions
+    const leadsLeadAd = findAction(ua, 'lead') || findAction(ua, 'onsite_conversion.lead_grouped')
+      || findAction(ac, 'lead') || findAction(ac, 'onsite_conversion.lead_grouped')
+
+    // LP/Site: pixel-tracked leads on landing pages or websites
+    const leadsSite = findAction(ua, 'offsite_conversion.fb_pixel_lead')
+      || findAction(ac, 'offsite_conversion.fb_pixel_lead')
+
+    const leadsCount = leadsLeadAd + leadsSite
     const cpl = leadsCount > 0 ? spend / leadsCount : 0
 
     const syncedMetrics = {
@@ -255,6 +261,8 @@ export async function metaOAuthRoutes(app: FastifyInstance) {
       cpm: Math.round(cpm * 100) / 100,
       cpc: Math.round(cpc * 100) / 100,
       leads: leadsCount,
+      leadsLeadAd,
+      leadsSite,
       cpl: Math.round(cpl * 100) / 100,
       lastSyncAt: new Date().toISOString(),
       period: `${sinceDate} - ${untilDate}`,

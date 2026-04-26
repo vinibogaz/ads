@@ -36,7 +36,7 @@ type ReportData = {
     cpl: number; cpa: number; qualificationRate: number; closeRate: number; totalConversionsSent: number
   }
   budgetByPlatform: { id: string; platform: AdsPlatform; integrationName: string | null; plannedAmount: number; spentAmount: number; remainingAmount: number; percentUsed: number; currency: string }[]
-  integrationMetrics: { id: string; name: string; platform: AdsPlatform; impressions: number; clicks: number; leads: number; ctr: number; cpm: number; cpl: number; cpc: number; spend: number; planned: number; lastSyncAt?: string | null }[]
+  integrationMetrics: { id: string; name: string; platform: AdsPlatform; impressions: number; clicks: number; leads: number; leadsLeadAd: number; leadsSite: number; ctr: number; cpm: number; cpl: number; cpc: number; spend: number; planned: number; lastSyncAt?: string | null }[]
   revenueMetrics?: { totalRevenue: number; totalMrr: number; ticketMedio: number; avgClosingDays: number; won: number; paid: number; organic: number; paidPct: number; organicPct: number; bySegment: Record<string, number> }
   leadsByStage: { stageName: string; count: number; isWon: boolean; isLost: boolean; pct: number }[]
   conversionsByPlatform: { platform: AdsPlatform; count: number }[]
@@ -207,7 +207,9 @@ export function ReportsView() {
                       <th className="text-right px-4 py-2.5 font-medium">CTR</th>
                       <th className="text-right px-4 py-2.5 font-medium">CPM</th>
                       <th className="text-right px-4 py-2.5 font-medium">CPC</th>
-                      <th className="text-right px-5 py-2.5 font-medium">Leads</th>
+                      <th className="text-right px-4 py-2.5 font-medium">Lead Ad</th>
+                      <th className="text-right px-4 py-2.5 font-medium">LP/Site</th>
+                      <th className="text-right px-5 py-2.5 font-medium">Total</th>
                       <th className="text-right px-5 py-2.5 font-medium">CPL</th>
                     </tr>
                   </thead>
@@ -230,6 +232,8 @@ export function ReportsView() {
                         <td className="px-4 py-3 text-right text-orf-text-2">{m.ctr > 0 ? `${m.ctr}%` : '—'}</td>
                         <td className="px-4 py-3 text-right text-orf-text-2">{m.cpm > 0 ? fmt(m.cpm) : '—'}</td>
                         <td className="px-4 py-3 text-right text-orf-text-2">{m.cpc > 0 ? fmt(m.cpc) : '—'}</td>
+                        <td className="px-4 py-3 text-right text-blue-400 font-medium">{m.leadsLeadAd > 0 ? fmtN(m.leadsLeadAd) : '—'}</td>
+                        <td className="px-4 py-3 text-right text-purple-400 font-medium">{m.leadsSite > 0 ? fmtN(m.leadsSite) : '—'}</td>
                         <td className="px-5 py-3 text-right text-orf-primary font-medium">{fmtN(m.leads)}</td>
                         <td className="px-5 py-3 text-right text-orf-text-2">{m.cpl > 0 ? fmt(m.cpl) : '—'}</td>
                       </tr>

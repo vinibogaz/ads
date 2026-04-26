@@ -96,6 +96,8 @@ export async function reportsRoutes(app: FastifyInstance) {
         impressions: meta.impressions ?? 0,
         clicks: meta.clicks ?? 0,
         leads: meta.leads ?? 0,
+        leadsLeadAd: meta.leadsLeadAd ?? 0,
+        leadsSite: meta.leadsSite ?? 0,
         ctr: meta.ctr ?? 0,
         cpm: meta.cpm ?? 0,
         cpl: meta.cpl ?? 0,

@@ -55,6 +55,9 @@ type DashboardData = {
   totalLeads: number
   crmLeads: number
   metaLeads: number
+  leadsLeadAd: number
+  leadsSite: number
+  leadsOrganic: number
   totalQualifiedLeads: number
   totalWon: number
   totalConversionsSent: number
@@ -351,6 +354,40 @@ export function DashboardView() {
             value={lm.avgClosingDays > 0 ? `${lm.avgClosingDays}d` : '—'}
             sub="Da entrada até o fechamento"
           />
+        </div>
+      )}
+
+      {/* Origem dos Leads — Lead Ad vs LP/Site vs Orgânico */}
+      {d && (d.leadsLeadAd > 0 || d.leadsSite > 0 || d.leadsOrganic > 0) && (
+        <div className="bg-orf-surface border border-orf-border rounded-orf">
+          <div className="px-5 py-4 border-b border-orf-border">
+            <h2 className="text-sm font-semibold text-orf-text">Origem dos Leads</h2>
+          </div>
+          <div className="px-5 py-4 grid grid-cols-3 gap-6">
+            {[
+              { label: 'Lead Ad (formulário Meta)', value: d.leadsLeadAd, color: 'bg-blue-500', desc: 'Formulário nativo Meta Ads' },
+              { label: 'LP / Site (pixel)', value: d.leadsSite, color: 'bg-purple-500', desc: 'Landing page com pixel' },
+              { label: 'Orgânico / Direto', value: d.leadsOrganic, color: 'bg-emerald-500', desc: 'Sem rastreamento pago' },
+            ].map(({ label, value, color, desc }) => {
+              const total = d.leadsLeadAd + d.leadsSite + d.leadsOrganic
+              const pct = total > 0 ? Math.round((value / total) * 100) : 0
+              return (
+                <div key={label}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs text-orf-text-2">{label}</span>
+                    <span className="text-sm font-semibold text-orf-text">{fmtN(value)}</span>
+                  </div>
+                  <div className="h-1.5 bg-orf-surface-2 rounded-full overflow-hidden mb-1">
+                    <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${pct}%` }} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-orf-text-3">{desc}</span>
+                    <span className="text-xs text-orf-text-3">{pct}%</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 

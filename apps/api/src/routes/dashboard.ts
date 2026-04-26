@@ -78,25 +78,22 @@ export async function dashboardRoutes(app: FastifyInstance) {
       : []
     const integrationMap = Object.fromEntries(integrationRows.map((i) => [i.id, i]))
 
-    // Total leads from Meta Ads (budget.meta.leads) — these are campaign lead conversions,
-    // shown when CRM leads aren't imported yet
-    const totalMetaLeads = budgetRows.reduce((s, b) => {
-      const m = (b.meta as any && Object.keys(b.meta as any).length > 0)
-        ? (b.meta as any)
-        : ((b.integrationId ? (integrationMap[b.integrationId]?.meta as any) : null) ?? {})
-      return s + (m.leads ?? 0)
-    }, 0)
+    // Helper to get meta from budget row with fallback to integration meta
+    const getBudgetMeta = (b: any) => {
+      const bm = b.meta as any
+      if (bm && Object.keys(bm).length > 0) return bm
+      return (b.integrationId ? (integrationMap[b.integrationId]?.meta as any) : null) ?? {}
+    }
+
+    // Lead breakdown by source from Meta Ads data
+    const totalMetaLeads = budgetRows.reduce((s, b) => s + (getBudgetMeta(b).leads ?? 0), 0)
+    const totalLeadAd = budgetRows.reduce((s, b) => s + (getBudgetMeta(b).leadsLeadAd ?? 0), 0)
+    const totalSiteLead = budgetRows.reduce((s, b) => s + (getBudgetMeta(b).leadsSite ?? 0), 0)
+
     const totalLeads = crmLeads > 0 ? crmLeads : totalMetaLeads
 
-    // Aggregate metrics from budget.meta (per-month) with integration.meta as fallback
-    const totalImpressions = budgetRows.reduce((s, b) => {
-      const m = (b.meta as any) ?? (b.integrationId ? (integrationMap[b.integrationId]?.meta as any) : null) ?? {}
-      return s + (m.impressions ?? 0)
-    }, 0)
-    const totalClicks = budgetRows.reduce((s, b) => {
-      const m = (b.meta as any) ?? (b.integrationId ? (integrationMap[b.integrationId]?.meta as any) : null) ?? {}
-      return s + (m.clicks ?? 0)
-    }, 0)
+    const totalImpressions = budgetRows.reduce((s, b) => s + (getBudgetMeta(b).impressions ?? 0), 0)
+    const totalClicks = budgetRows.reduce((s, b) => s + (getBudgetMeta(b).clicks ?? 0), 0)
     const avgCtr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0
     const avgCpm = totalSpent > 0 && totalImpressions > 0 ? (totalSpent / totalImpressions) * 1000 : 0
     const cpl = totalLeads > 0 && totalSpent > 0 ? totalSpent / totalLeads : 0
@@ -139,6 +136,11 @@ export async function dashboardRoutes(app: FastifyInstance) {
         totalLeads,
         crmLeads,
         metaLeads: totalMetaLeads,
+        leadsLeadAd: totalLeadAd,
+        leadsSite: totalSiteLead,
+        leadsOrganic: crmLeads > 0
+          ? Math.max(0, crmLeads - totalMetaLeads)
+          : 0,
         totalQualifiedLeads: qualifiedLeads,
         totalWon: wonLeads,
         totalConversionsSent: totalConversions,
