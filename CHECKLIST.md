@@ -105,6 +105,7 @@
 - ✅ Multi-aba: configurar campos diferentes por aba livremente (+ Adicionar aba)
 - ✅ Header em português na planilha
 - ✅ Sync de múltiplas abas em paralelo
+- ⏳ Validar fluxo: URL → carrega abas automaticamente → configurar → salvar (pendente validação)
 
 ---
 
