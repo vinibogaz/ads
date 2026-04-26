@@ -215,15 +215,6 @@ const LEAD_FIELD_LABELS: Record<string, string> = {
 
 type SheetConfig = { sheetName: string; fieldMapping: Record<string, string> }
 
-const DEFAULT_CONFIG: SheetConfig = {
-  sheetName: '',
-  fieldMapping: {
-    name: 'A', email: 'B', phone: 'C', company: 'D',
-    utmSource: 'E', utmMedium: 'F', utmCampaign: 'G',
-    value: 'H', mrr: 'I', closedAt: 'J', createdAt: 'K',
-  },
-}
-
 function FieldMappingEditor({
   config,
   index,
@@ -239,7 +230,7 @@ function FieldMappingEditor({
   onRemove: (idx: number) => void
   canRemove: boolean
 }) {
-  const [open, setOpen] = useState(index === 0)
+  const [open, setOpen] = useState(true)
   const activeCount = Object.values(config.fieldMapping).filter(Boolean).length
 
   return (
@@ -251,54 +242,32 @@ function FieldMappingEditor({
           className="flex-1 flex items-center justify-between px-3 py-2.5 text-xs font-medium text-orf-text-2 hover:text-orf-text transition-colors text-left"
         >
           <span>
-            {config.sheetName ? (
-              <><span className="text-orf-text font-semibold">{config.sheetName}</span> · {activeCount} campo{activeCount !== 1 ? 's' : ''}</>
-            ) : (
-              `Aba ${index + 1} — selecione abaixo`
-            )}
+            {config.sheetName
+              ? <><span className="text-orf-text font-semibold">{config.sheetName}</span> · {activeCount} campo{activeCount !== 1 ? 's' : ''}</>
+              : <span className="text-orf-text-3">Aba {index + 1} — selecione uma aba</span>
+            }
           </span>
           <span className="text-orf-text-3 ml-2">{open ? '▲' : '▼'}</span>
         </button>
         {canRemove && (
-          <button
-            type="button"
-            onClick={() => onRemove(index)}
-            className="px-3 py-2.5 text-red-400 hover:text-red-600 text-xs"
-          >
-            ✕
-          </button>
+          <button type="button" onClick={() => onRemove(index)} className="px-3 py-2.5 text-red-400 hover:text-red-600 text-xs">✕</button>
         )}
       </div>
 
       {open && (
         <div className="p-3 space-y-3">
-          {/* Tab selector */}
-          {sheetTabs.length > 0 ? (
-            <div>
-              <label className="block text-xs font-medium text-orf-text-2 mb-1">Aba da planilha</label>
-              <select
-                value={config.sheetName}
-                onChange={(e) => onUpdate(index, { ...config, sheetName: e.target.value })}
-                className="w-full px-3 py-1.5 bg-orf-surface border border-orf-border rounded-orf-sm text-sm text-orf-text focus:outline-none focus:border-orf-primary"
-              >
-                <option value="">— selecione —</option>
-                {sheetTabs.map((t) => <option key={t.id} value={t.title}>{t.title}</option>)}
-              </select>
-            </div>
-          ) : (
-            <div>
-              <label className="block text-xs font-medium text-orf-text-2 mb-1">Nome da aba</label>
-              <input
-                type="text"
-                placeholder="Ex: Sheet1, Leads, Vendas"
-                value={config.sheetName}
-                onChange={(e) => onUpdate(index, { ...config, sheetName: e.target.value })}
-                className="w-full px-3 py-1.5 bg-orf-surface border border-orf-border rounded-orf-sm text-sm text-orf-text placeholder:text-orf-text-3 focus:outline-none focus:border-orf-primary"
-              />
-            </div>
-          )}
+          <div>
+            <label className="block text-xs font-medium text-orf-text-2 mb-1">Aba da planilha</label>
+            <select
+              value={config.sheetName}
+              onChange={(e) => onUpdate(index, { ...config, sheetName: e.target.value })}
+              className="w-full px-3 py-1.5 bg-orf-surface border border-orf-border rounded-orf-sm text-sm text-orf-text focus:outline-none focus:border-orf-primary"
+            >
+              <option value="">— selecione —</option>
+              {sheetTabs.map((t) => <option key={t.id} value={t.title}>{t.title}</option>)}
+            </select>
+          </div>
 
-          {/* Field → column mapping */}
           <div>
             <p className="text-xs font-medium text-orf-text-2 mb-2">Campos → Colunas <span className="text-orf-text-3 font-normal">(deixe em branco para não exportar)</span></p>
             <div className="grid grid-cols-[1fr_52px] gap-x-2 gap-y-1">
@@ -337,7 +306,8 @@ function GoogleSheetsSection({ onGoogleSetup }: { onGoogleSetup?: string | null 
   const [spreadsheetUrl, setSpreadsheetUrl] = useState('')
   const [sheetTabs, setSheetTabs] = useState<{ id: number; title: string }[]>([])
   const [loadingTabs, setLoadingTabs] = useState(false)
-  const [sheetConfigs, setSheetConfigs] = useState<SheetConfig[]>([{ ...DEFAULT_CONFIG }])
+  const [tabsLoaded, setTabsLoaded] = useState(false)
+  const [sheetConfigs, setSheetConfigs] = useState<SheetConfig[]>([])
   const [setupError, setSetupError] = useState('')
   const [connectingGoogle, setConnectingGoogle] = useState(false)
   const [syncingId, setSyncingId] = useState<string | null>(null)
@@ -370,27 +340,38 @@ function GoogleSheetsSection({ onGoogleSetup }: { onGoogleSetup?: string | null 
     return match ? match[1]! : input.trim()
   }
 
-  const handleUrlBlur = async () => {
-    if (!setupId || !spreadsheetUrl) return
-    const spreadsheetId = extractSpreadsheetId(spreadsheetUrl)
+  const loadTabs = async (url: string) => {
+    if (!setupId || !url.trim()) return
+    const spreadsheetId = extractSpreadsheetId(url)
+    if (!spreadsheetId) return
     setLoadingTabs(true)
+    setTabsLoaded(false)
     setSetupError('')
+    setSheetConfigs([])
     try {
       const res = await api<{ title: string; sheets: { id: number; title: string }[] }>(
         `/auth/google/spreadsheet-meta?spreadsheetId=${spreadsheetId}&integrationId=${setupId}`
       )
       setSheetTabs(res.data.sheets)
       if (!name) setName(res.data.title)
-      // Pre-fill first tab with first sheet name
-      if (res.data.sheets[0]) {
-        setSheetConfigs(prev => prev.map((c, i) => i === 0 ? { ...c, sheetName: res.data.sheets[0]!.title } : c))
-      }
+      // Start with one config pre-filled with the first tab
+      setSheetConfigs([{ sheetName: res.data.sheets[0]?.title ?? '', fieldMapping: {} }])
+      setTabsLoaded(true)
     } catch (e: any) {
-      setSetupError(e.message ?? 'Não foi possível acessar a planilha')
+      setSetupError(e.message ?? 'Não foi possível acessar a planilha. Verifique o ID e as permissões.')
       setSheetTabs([])
+      setTabsLoaded(false)
     } finally {
       setLoadingTabs(false)
     }
+  }
+
+  // Auto-load when URL looks like a valid spreadsheet URL or ID
+  const handleUrlChange = (val: string) => {
+    setSpreadsheetUrl(val)
+    setTabsLoaded(false)
+    setSheetTabs([])
+    setSheetConfigs([])
   }
 
   const updateConfig = (idx: number, c: SheetConfig) =>
@@ -427,8 +408,9 @@ function GoogleSheetsSection({ onGoogleSetup }: { onGoogleSetup?: string | null 
       setSetupId(null)
       setName('')
       setSpreadsheetUrl('')
-      setSheetConfigs([{ ...DEFAULT_CONFIG }])
+      setSheetConfigs([])
       setSheetTabs([])
+      setTabsLoaded(false)
       setSetupError('')
       window.history.replaceState({}, '', '/integrations')
     },
@@ -534,53 +516,45 @@ function GoogleSheetsSection({ onGoogleSetup }: { onGoogleSetup?: string | null 
 
             <div>
               <label className="block text-xs font-medium text-orf-text-2 mb-1.5">URL ou ID da planilha</label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="https://docs.google.com/spreadsheets/d/..."
-                  value={spreadsheetUrl}
-                  onChange={(e) => setSpreadsheetUrl(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleUrlBlur()}
-                  className="flex-1 px-3 py-2 bg-orf-surface-2 border border-orf-border rounded-orf-sm text-sm text-orf-text placeholder:text-orf-text-3 focus:outline-none focus:border-orf-primary"
-                />
-                <button
-                  type="button"
-                  onClick={handleUrlBlur}
-                  disabled={!spreadsheetUrl.trim() || loadingTabs}
-                  className="px-3 py-2 bg-orf-primary text-white rounded-orf-sm text-xs font-medium hover:bg-orf-primary/90 disabled:opacity-50 whitespace-nowrap"
-                >
-                  {loadingTabs ? '...' : 'Carregar abas'}
-                </button>
-              </div>
-              {sheetTabs.length > 0 && (
+              <input
+                type="text"
+                placeholder="https://docs.google.com/spreadsheets/d/... ou só o ID"
+                value={spreadsheetUrl}
+                onChange={(e) => handleUrlChange(e.target.value)}
+                onBlur={() => loadTabs(spreadsheetUrl)}
+                onKeyDown={(e) => e.key === 'Enter' && loadTabs(spreadsheetUrl)}
+                className="w-full px-3 py-2 bg-orf-surface-2 border border-orf-border rounded-orf-sm text-sm text-orf-text placeholder:text-orf-text-3 focus:outline-none focus:border-orf-primary"
+              />
+              {loadingTabs && (
+                <p className="text-xs text-orf-text-3 mt-1">Carregando abas da planilha...</p>
+              )}
+              {tabsLoaded && sheetTabs.length > 0 && (
                 <p className="text-xs text-emerald-600 mt-1">✓ {sheetTabs.length} aba{sheetTabs.length !== 1 ? 's' : ''} encontrada{sheetTabs.length !== 1 ? 's' : ''}: {sheetTabs.map((t) => t.title).join(', ')}</p>
               )}
             </div>
 
-            {/* Multi-tab configuration */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold text-orf-text-2 uppercase tracking-wide">Abas configuradas</p>
-                <button
-                  type="button"
-                  onClick={addConfig}
-                  className="text-xs text-orf-primary hover:underline"
-                >
-                  + Adicionar aba
-                </button>
+            {/* Multi-tab configuration — só aparece após carregar as abas */}
+            {tabsLoaded && sheetTabs.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-orf-text-2 uppercase tracking-wide">Configurar abas</p>
+                  <button type="button" onClick={addConfig} className="text-xs text-orf-primary hover:underline">
+                    + Adicionar aba
+                  </button>
+                </div>
+                {sheetConfigs.map((cfg, idx) => (
+                  <FieldMappingEditor
+                    key={idx}
+                    config={cfg}
+                    index={idx}
+                    sheetTabs={sheetTabs}
+                    onUpdate={updateConfig}
+                    onRemove={removeConfig}
+                    canRemove={sheetConfigs.length > 1}
+                  />
+                ))}
               </div>
-              {sheetConfigs.map((cfg, idx) => (
-                <FieldMappingEditor
-                  key={idx}
-                  config={cfg}
-                  index={idx}
-                  sheetTabs={sheetTabs}
-                  onUpdate={updateConfig}
-                  onRemove={removeConfig}
-                  canRemove={sheetConfigs.length > 1}
-                />
-              ))}
-            </div>
+            )}
 
             <div>
               <label className="block text-xs font-medium text-orf-text-2 mb-1.5">Nome da integração</label>
@@ -602,7 +576,7 @@ function GoogleSheetsSection({ onGoogleSetup }: { onGoogleSetup?: string | null 
               </button>
               <button
                 onClick={() => completeSetup.mutate()}
-                disabled={!name || !spreadsheetUrl || completeSetup.isPending}
+                disabled={!name || !spreadsheetUrl || !tabsLoaded || sheetConfigs.length === 0 || completeSetup.isPending}
                 className="flex-1 px-4 py-2 bg-orf-primary text-white rounded-orf-sm text-sm font-medium hover:bg-orf-primary/90 disabled:opacity-50"
               >
                 {completeSetup.isPending ? 'Salvando...' : 'Salvar integração'}
