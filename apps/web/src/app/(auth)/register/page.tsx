@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import { RegisterForm } from '@/components/auth/RegisterForm'
 
 export const metadata: Metadata = { title: 'Criar conta — Orffia Ads' }
@@ -19,7 +20,7 @@ export default function RegisterPage() {
 
         <div className="orf-card">
           <h1 className="text-xl font-semibold text-orf-text mb-6">Criar sua conta</h1>
-          <RegisterForm />
+          <Suspense fallback={null}><RegisterForm /></Suspense>
 
           <div className="mt-6 text-center text-sm text-orf-text-2">
             Já tem uma conta?{' '}

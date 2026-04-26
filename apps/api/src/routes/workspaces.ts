@@ -131,17 +131,24 @@ export async function workspacesRoutes(app: FastifyInstance) {
   app.delete('/:id/invites/:inviteId', async (request, reply) => {
     const { id, inviteId } = request.params as { id: string; inviteId: string }
 
-    const myMembership = await db.query.workspaceMembers.findFirst({
-      where: and(eq(workspaceMembers.tenantId, id), eq(workspaceMembers.userId, request.user.sub)),
-    })
-    if (!myMembership || !['owner', 'admin'].includes(myMembership.role)) {
-      return reply.status(403).send({ error: 'FORBIDDEN' })
+    // Use JWT role directly — avoid extra DB lookup that can fail for legacy users
+    if (!['owner', 'admin'].includes(request.user.role)) {
+      return reply.status(403).send({ error: 'FORBIDDEN', message: 'Only admins can cancel invites' })
+    }
+    // Ensure the user is acting within their own workspace
+    if (request.user.tid !== id) {
+      return reply.status(403).send({ error: 'FORBIDDEN', message: 'Workspace mismatch' })
     }
 
-    await db.delete(userInvitations).where(
-      and(eq(userInvitations.id, inviteId), eq(userInvitations.tenantId, id))
-    )
-    return reply.status(204).send()
+    const deleted = await db.delete(userInvitations)
+      .where(and(eq(userInvitations.id, inviteId), eq(userInvitations.tenantId, id)))
+      .returning()
+
+    if (deleted.length === 0) {
+      return reply.status(404).send({ error: 'NOT_FOUND', message: 'Invite not found' })
+    }
+
+    return reply.send({ data: { deleted: true } })
   })
 
   // PATCH /api/v1/workspaces/:id/members/:userId — update member role
