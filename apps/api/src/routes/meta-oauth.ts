@@ -241,17 +241,15 @@ export async function metaOAuthRoutes(app: FastifyInstance) {
     const ua = insights?.unique_actions
     const ac = insights?.actions
 
-    // Lead Ad: native form submissions — 'lead' = Meta Ads Manager "Resultados" for Lead campaigns
-    // This is the reliable number at account level via unique_actions (deduplicated per person)
+    // Lead Ad: native form submissions via unique_actions (deduplicated = 1 person = 1 conversion)
     const leadsLeadAd = findAction(ua, 'lead') || findAction(ua, 'onsite_conversion.lead_grouped')
       || findAction(ac, 'lead') || findAction(ac, 'onsite_conversion.lead_grouped')
 
-    // LP/Site: NOT counted at account level — offsite_conversion.fb_pixel_lead inflates at account level
-    // (pixel fires for all site visitors, not just lead conversions from campaigns)
-    // Will be added via campaign-level breakdown in future implementation
-    const leadsSite = 0
+    // LP/Site: pixel leads — ONLY from unique_actions (deduplicated, avoids pixel inflation)
+    // unique_actions counts distinct people, not event fires — safe to use
+    const leadsSite = findAction(ua, 'offsite_conversion.fb_pixel_lead')
 
-    const leadsCount = leadsLeadAd
+    const leadsCount = leadsLeadAd + leadsSite || leadsLeadAd
     const cpl = leadsCount > 0 ? spend / leadsCount : 0
 
     const syncedMetrics = {
