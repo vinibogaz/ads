@@ -16,16 +16,19 @@ async function proxy(request: NextRequest, { params }: { params: Promise<{ path:
   const url = `${INTERNAL_API}/api/v1/${apiPath}${search}`
 
   const headers = new Headers()
-  // Forward relevant headers
   const auth = request.headers.get('authorization')
   if (auth) headers.set('authorization', auth)
-  headers.set('content-type', request.headers.get('content-type') ?? 'application/json')
   headers.set('x-forwarded-for', request.headers.get('x-forwarded-for') ?? '')
   headers.set('user-agent', request.headers.get('user-agent') ?? '')
 
   const body = request.method !== 'GET' && request.method !== 'HEAD'
     ? await request.text()
     : undefined
+
+  // Only set Content-Type when there is an actual body — Fastify rejects empty bodies with this header
+  if (body && body.length > 0) {
+    headers.set('content-type', request.headers.get('content-type') ?? 'application/json')
+  }
 
   const res = await fetch(url, {
     method: request.method,
