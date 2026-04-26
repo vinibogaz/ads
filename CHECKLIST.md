@@ -137,4 +137,6 @@
 - ✅ Criar novo workspace
 - ✅ Página de membros (/settings/members)
 - ✅ Aceitar convite via link (/invite/[token])
+- ✅ Novo usuário aceita convite ao criar conta (RegisterForm processa ?invite=token)
+- ✅ Cancelar convite pendente
 - ❌ Envio automático de e-mail ao convidar (SMTP — Resend/SendGrid/Mailgun)
