@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, or } from 'drizzle-orm'
 import { db, crmIntegrations, leads, funnelStages } from '@ads/db'
 import { z } from 'zod'
 import { env } from '../config/env.js'
@@ -154,7 +154,7 @@ export async function hubspotRoutes(app: FastifyInstance) {
     }
   })
 
-  // POST /api/v1/crm/hubspot/sync/:id — sync contacts + deals
+  // POST /api/v1/crm/hubspot/sync/:id — sync ALL contacts + deals with full pagination
   app.post('/sync/:id', { preHandler: [app.authenticate] }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const body = z.object({
@@ -172,24 +172,51 @@ export async function hubspotRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: 'TOKEN_ERROR', message: e.message })
     }
 
-    // Fetch contacts (up to 100 per page, we'll do one pass for now)
-    const contactsData = await hsGet(token, '/crm/v3/objects/contacts', {
-      limit: '100',
-      properties: 'firstname,lastname,email,phone,company,hs_lead_status,createdate,hs_analytics_source,hs_analytics_first_url,hubspot_owner_id',
-      sorts: 'createdate',
-    }) as { results: any[]; paging?: any }
+    // ── Helper: fetch ALL pages from HubSpot ──────────────────────────────
+    async function fetchAllPages(path: string, params: Record<string, string>): Promise<any[]> {
+      const all: any[] = []
+      let after: string | undefined = undefined
+      do {
+        const pageParams = { ...params, limit: '100', ...(after ? { after } : {}) }
+        const data = await hsGet(token, path, pageParams) as { results: any[]; paging?: { next?: { after: string } } }
+        all.push(...(data.results ?? []))
+        after = data.paging?.next?.after
+      } while (after)
+      return all
+    }
+
+    // ── Sync contacts → leads ─────────────────────────────────────────────
+    const contacts = await fetchAllPages('/crm/v3/objects/contacts', {
+      properties: 'firstname,lastname,email,phone,company,hs_lead_status,hs_lifecycle_stage,createdate,hs_analytics_source,hs_analytics_source_data_1,hs_analytics_first_url',
+    })
 
     let synced = 0
     let updated = 0
 
-    for (const contact of contactsData.results ?? []) {
-      const p = contact.properties ?? {}
-      const email = p.email ?? ''
-      const name = [p.firstname, p.lastname].filter(Boolean).join(' ')
-      const externalId = contact.id
+    // Map HubSpot lifecycle stage to our lead status
+    const mapLifecycleStatus = (lifecycle: string, dealStage?: string): string => {
+      if (dealStage === 'closedwon') return 'won'
+      if (dealStage === 'closedlost') return 'lost'
+      switch (lifecycle) {
+        case 'customer': return 'won'
+        case 'opportunity': return 'opportunity'
+        case 'salesqualifiedlead': return 'qualified'
+        case 'marketingqualifiedlead': return 'qualified'
+        case 'lead': return 'new'
+        case 'subscriber': return 'new'
+        default: return 'new'
+      }
+    }
 
-      // Check existing lead
-      const existing = await db.query.leads.findFirst({
+    for (const contact of contacts) {
+      const p = contact.properties ?? {}
+      const email = (p.email ?? '').toLowerCase().trim()
+      const name = [p.firstname, p.lastname].filter(Boolean).join(' ') || null
+      const externalId = String(contact.id)
+      const status = mapLifecycleStatus(p.hs_lifecycle_stage ?? '')
+
+      // Deduplication: 1st by externalId+crmIntegration, 2nd by email in tenant
+      let existing = await db.query.leads.findFirst({
         where: and(
           eq(leads.tenantId, request.user.tid),
           eq(leads.crmIntegrationId, id),
@@ -197,14 +224,29 @@ export async function hubspotRoutes(app: FastifyInstance) {
         ),
       })
 
-      const utmSource = p.hs_analytics_source ?? ''
+      // Fallback: match by email if no externalId match found
+      if (!existing && email) {
+        existing = await db.query.leads.findFirst({
+          where: and(
+            eq(leads.tenantId, request.user.tid),
+            eq(leads.email, email)
+          ),
+        })
+      }
 
       if (existing) {
+        // Update existing lead — never change status backwards (e.g. won→new)
+        const STATUS_RANK: Record<string, number> = { new: 0, no_contact: 1, contacted: 2, qualified: 3, unqualified: 3, opportunity: 4, won: 5, lost: 5 }
+        const keepStatus = (STATUS_RANK[existing.status] ?? 0) >= (STATUS_RANK[status] ?? 0)
         await db.update(leads).set({
+          externalId, // link by externalId going forward
+          crmIntegrationId: id,
           name: name || existing.name,
           email: email || existing.email,
           phone: p.phone || existing.phone,
           company: p.company || existing.company,
+          status: keepStatus ? existing.status : status as any,
+          utmSource: p.hs_analytics_source || existing.utmSource,
           updatedAt: new Date(),
         }).where(eq(leads.id, existing.id))
         updated++
@@ -214,31 +256,40 @@ export async function hubspotRoutes(app: FastifyInstance) {
           clientId: body.clientId ?? null,
           crmIntegrationId: id,
           externalId,
-          name: name || null,
+          name,
           email: email || null,
           phone: p.phone || null,
           company: p.company || null,
-          utmSource: utmSource || null,
-          status: 'new',
-          meta: { hsSource: p.hs_analytics_source, firstUrl: p.hs_analytics_first_url },
+          utmSource: p.hs_analytics_source || null,
+          status: status as any,
+          meta: {
+            hsLifecycleStage: p.hs_lifecycle_stage,
+            hsSource: p.hs_analytics_source,
+            hsSourceDetail: p.hs_analytics_source_data_1,
+            firstUrl: p.hs_analytics_first_url,
+          },
         })
         synced++
       }
     }
 
-    // Sync deals → update lead revenue fields
+    // ── Sync deals → revenue + status + funnel stage ──────────────────────
     if (body.syncDeals) {
-      const dealsData = await hsGet(token, '/crm/v3/objects/deals', {
-        limit: '100',
-        properties: 'dealname,amount,closedate,dealstage,hs_deal_stage_probability,pipeline,createdate,mrr',
+      const deals = await fetchAllPages('/crm/v3/objects/deals', {
+        properties: 'dealname,amount,closedate,dealstage,pipeline,createdate,mrr',
         associations: 'contacts',
-      }) as { results: any[] }
+      })
 
       let dealsUpdated = 0
-      for (const deal of dealsData.results ?? []) {
+      for (const deal of deals) {
         const p = deal.properties ?? {}
-        const contactIds = (deal.associations?.contacts?.results ?? []).map((c: any) => c.id)
+        const contactIds: string[] = (deal.associations?.contacts?.results ?? []).map((c: any) => String(c.id))
         if (contactIds.length === 0) continue
+
+        const isWon = p.dealstage === 'closedwon'
+        const isLost = p.dealstage === 'closedlost'
+        const stageId = await mapStage(request.user.tid, id, p.dealstage)
+        const dealStatus = isWon ? 'won' : isLost ? 'lost' : undefined
 
         for (const contactId of contactIds) {
           const lead = await db.query.leads.findFirst({
@@ -250,14 +301,11 @@ export async function hubspotRoutes(app: FastifyInstance) {
           })
           if (!lead) continue
 
-          const isWon = p.dealstage === 'closedwon'
-          const stageId = await mapStage(request.user.tid, id, p.dealstage)
-
           await db.update(leads).set({
             value: p.amount ? String(p.amount) : lead.value,
             mrr: p.mrr ? String(p.mrr) : lead.mrr,
             closedAt: isWon && p.closedate ? new Date(p.closedate) : lead.closedAt,
-            status: isWon ? 'won' : (p.dealstage === 'closedlost' ? 'lost' : lead.status),
+            ...(dealStatus ? { status: dealStatus as any } : {}),
             stageId: stageId ?? lead.stageId,
             updatedAt: new Date(),
           }).where(eq(leads.id, lead.id))
@@ -267,9 +315,18 @@ export async function hubspotRoutes(app: FastifyInstance) {
       synced += dealsUpdated
     }
 
-    await db.update(crmIntegrations).set({ lastSyncAt: new Date(), updatedAt: new Date() }).where(eq(crmIntegrations.id, id))
+    await db.update(crmIntegrations)
+      .set({ lastSyncAt: new Date(), updatedAt: new Date() })
+      .where(eq(crmIntegrations.id, id))
 
-    return reply.send({ data: { synced, updated, total: synced + updated } })
+    return reply.send({
+      data: {
+        contacts: contacts.length,
+        created: synced,
+        updated,
+        total: synced + updated,
+      }
+    })
   })
 
   // GET /api/v1/crm/hubspot/pipeline/:id — fetch HubSpot deal stages for funnel mapping
