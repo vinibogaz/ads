@@ -35,7 +35,7 @@
 - ✅ Filtro por status e cliente
 - ✅ UTM tracking nos leads (source, medium, campaign, gclid, fbclid)
 - ❌ Campo de agendamento (virá do CRM)
-- ❌ Separação explícita Lead Ad (formulário nativo) vs LP/Site vs Orgânico
+- ⏳ Separação Lead Ad vs LP/Site vs Orgânico — Lead Ad funcionando, LP/Site usando unique_actions (pendente validação após sync)
 
 ---
 
@@ -47,12 +47,14 @@
 - ✅ Pago vs Orgânico com barras de progresso
 - ✅ Leads por Segmento/Campanha
 - ✅ Navegação por mês/ano
-- ❌ Separação Lead Ad vs LP/Site vs Orgânico com contagens isoladas
+- ✅ Seção "Origem dos Leads" com barras (Lead Ad / LP/Site / Orgânico)
+- ⏳ LP/Site com número correto (pendente validação) — botão sync sumiu (pendente investigação)
 
 ---
 
 ## Relatório
 - ✅ Métricas por conta (investido, impressões, cliques, CTR, CPM, CPC, leads, CPL)
+- ✅ Colunas Lead Ad e LP/Site separadas na tabela de métricas
 - ✅ Budget por plataforma com progresso
 - ✅ Funil por etapa com %
 - ✅ Top origens de tráfego (UTM)
@@ -60,7 +62,6 @@
 - ✅ Leads por Segmento/Campanha
 - ✅ KPIs de receita (Receita Total, Ticket Médio, MRR, Tempo Médio de Fechamento)
 - ❌ Breakdown por campanha / grupo de anúncio / anúncio
-- ❌ Separação Lead Ad vs LP/Site vs Orgânico no relatório
 - ❌ Agendamentos no relatório
 
 ---
@@ -68,8 +69,9 @@
 ## Integrações — Meta Ads
 - ✅ OAuth + seleção de contas
 - ✅ Sync gasto, impressões, cliques, CTR, CPM, CPC
-- ✅ Contagem de leads via unique_actions (deduplificado, igual Meta Ads Manager)
-- ❌ Separação Lead Ad (formulário nativo) vs LP/Site (pixel)
+- ✅ Lead Ad count via unique_actions (deduplificado, igual Meta Ads Manager "Resultados")
+- ⏳ LP/Site via unique_actions.offsite_conversion.fb_pixel_lead (pendente validação número correto)
+- ⏳ Botão sync sumiu de algum lugar na UI (pendente investigação)
 - ❌ Breakdown por campanha / grupo / anúncio no relatório
 
 ---
