@@ -231,10 +231,9 @@ export async function metaOAuthRoutes(app: FastifyInstance) {
     const cpm = parseFloat(insights?.cpm ?? '0')
     const cpc = parseFloat(insights?.cpc ?? '0')
 
-    // Separate lead counts by source type — matches Meta Ads Manager display:
-    // - Lead Ad (formulário nativo): 'lead' or 'onsite_conversion.lead_grouped'
-    // - LP/Site (pixel): 'offsite_conversion.fb_pixel_lead'
-    // Use unique_actions for deduplicated counts (one person = one conversion)
+    // Lead counts using unique_actions (deduplicated, matches Meta Ads Manager "Resultados")
+    // At account level, only 'lead' (native Lead Ad forms) is reliable.
+    // 'offsite_conversion.fb_pixel_lead' (LP/pixel) inflates at account level — needs campaign breakdown.
     const findAction = (arr: { action_type: string; value: string }[] | undefined, type: string) => {
       const a = arr?.find((x) => x.action_type === type)
       return a ? parseInt(a.value ?? '0') : 0
@@ -242,15 +241,19 @@ export async function metaOAuthRoutes(app: FastifyInstance) {
     const ua = insights?.unique_actions
     const ac = insights?.actions
 
-    // Lead Ad: native form submissions
+    // Lead Ad: native form submissions (most reliable metric)
     const leadsLeadAd = findAction(ua, 'lead') || findAction(ua, 'onsite_conversion.lead_grouped')
       || findAction(ac, 'lead') || findAction(ac, 'onsite_conversion.lead_grouped')
 
-    // LP/Site: pixel-tracked leads on landing pages or websites
-    const leadsSite = findAction(ua, 'offsite_conversion.fb_pixel_lead')
+    // LP/Site: pixel-tracked leads — only count if smaller than leadsLeadAd to avoid inflated pixel data
+    const rawSiteLeads = findAction(ua, 'offsite_conversion.fb_pixel_lead')
       || findAction(ac, 'offsite_conversion.fb_pixel_lead')
+    // Only trust LP/Site count when it's not inflated (heuristic: < 10x lead ad count, or lead ad = 0)
+    const leadsSite = leadsLeadAd === 0
+      ? rawSiteLeads
+      : (rawSiteLeads <= leadsLeadAd * 10 ? rawSiteLeads : 0)
 
-    const leadsCount = leadsLeadAd + leadsSite
+    const leadsCount = leadsLeadAd + leadsSite || leadsLeadAd
     const cpl = leadsCount > 0 ? spend / leadsCount : 0
 
     const syncedMetrics = {
