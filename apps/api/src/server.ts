@@ -111,6 +111,16 @@ const start = async () => {
   try {
     await app.listen({ port: env.PORT, host: '0.0.0.0' })
     app.log.info(`Orffia Ads API running on port ${env.PORT}`)
+    // Reset any stale syncing status from previous crash/restart
+    try {
+      const { crmIntegrations } = await import('@ads/db')
+      const { db } = await import('@ads/db')
+      const { eq } = await import('drizzle-orm')
+      await db.update(crmIntegrations)
+        .set({ syncStatus: 'idle', syncProgress: 0 })
+        .where(eq(crmIntegrations.syncStatus as any, 'syncing'))
+      app.log.info('Cleaned up stale sync statuses')
+    } catch {}
     startCrmSyncScheduler(app.log)
 
     // Graceful shutdown
