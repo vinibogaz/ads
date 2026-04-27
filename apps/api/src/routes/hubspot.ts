@@ -209,15 +209,30 @@ export async function hubspotRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: 'TOKEN_ERROR', message: e.message })
     }
 
-    // ── Helper: fetch ALL pages from HubSpot ──────────────────────────────
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+    // ── Helper: fetch ALL pages from HubSpot with rate limit handling ──────
     async function fetchAllPages(path: string, params: Record<string, string>): Promise<any[]> {
       const all: any[] = []
       let after: string | undefined = undefined
       do {
         const pageParams = { ...params, limit: '100', ...(after ? { after } : {}) }
-        const data = await hsGet(token, path, pageParams) as { results: any[]; paging?: { next?: { after: string } } }
+        let retries = 3
+        let data: any
+        while (retries > 0) {
+          try {
+            data = await hsGet(token, path, pageParams)
+            break
+          } catch (e: any) {
+            if (e.message?.includes('limit') && retries > 1) {
+              await sleep(2000) // wait 2s on rate limit
+              retries--
+            } else throw e
+          }
+        }
         all.push(...(data.results ?? []))
         after = data.paging?.next?.after
+        if (after) await sleep(300) // 300ms between pages to avoid rate limit
       } while (after)
       return all
     }
