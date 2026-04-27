@@ -124,6 +124,8 @@ export async function runHubSpotContactSync(
         status: keepStatus ? existing.status : (status as any),
         utmSource: utmSource || existing.utmSource,
         utmMedium: utmMedium || existing.utmMedium,
+        // Update createdAt with real HubSpot date if we have it and current is today
+        ...(hsCreatedAt ? { createdAt: hsCreatedAt } : {}),
         updatedAt: new Date(),
       }).where(eq(leads.id, existing.id))
       updated++
