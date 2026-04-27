@@ -84,10 +84,13 @@
 ---
 
 ## Integrações — HubSpot CRM
-- ✅ OAuth flow
-- ✅ Sync de contatos → leads
-- ✅ Sync de deals → campos de receita nos leads
+- ✅ Conexão via Private App token (funciona agora para todos os clientes)
+- ✅ Sync completo com paginação (todos os contatos, sem limite de 100)
+- ✅ Deduplicação por externalId + email (sem leads duplicados)
+- ✅ Mapeamento de lifecycle stage → status do lead
+- ✅ Sync de deals → receita, MRR, data de fechamento, status
 - ✅ Mapeamento de pipeline HubSpot → funil interno
+- ❌ OAuth automático (mais fácil para clientes não técnicos — precisa de Client ID/Secret no .env)
 - ❌ Agendamentos puxados do CRM
 
 ---
