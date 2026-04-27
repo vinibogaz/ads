@@ -210,6 +210,11 @@ export async function hubspotRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: 'TOKEN_ERROR', message: e.message })
     }
 
+    // Prevent multiple concurrent syncs
+    if ((integration as any).syncStatus === 'syncing') {
+      return reply.status(409).send({ error: 'ALREADY_SYNCING', message: 'Sync já em andamento' })
+    }
+
     // Mark as syncing immediately so frontend can show progress
     await db.update(crmIntegrations)
       .set({ syncStatus: 'syncing', syncProgress: 0, syncMessage: 'Iniciando...', updatedAt: new Date() })
@@ -220,6 +225,7 @@ export async function hubspotRoutes(app: FastifyInstance) {
 
     // Run sync in background — completely detached from request lifecycle
     setImmediate(async () => {
+      app.log.info({ integrationId: id }, 'HubSpot background sync setImmediate started')
       const setProgress = async (progress: number, message: string) => {
         try {
           await db.update(crmIntegrations)

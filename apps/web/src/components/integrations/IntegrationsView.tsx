@@ -976,10 +976,14 @@ export function IntegrationsView() {
   const syncHubSpot = useMutation({
     mutationFn: (id: string) => api(`/crm/hubspot/sync/${id}`, { method: 'POST', body: JSON.stringify({}) }),
     onSuccess: () => {
-      // Start polling for progress
       queryClient.invalidateQueries({ queryKey: ['crm-integrations'] })
+      queryClient.invalidateQueries({ queryKey: ['crm-integrations-poll'] })
     },
-    onError: (e: any) => setToast({ type: 'error', message: e.message ?? 'Erro ao sincronizar HubSpot' }),
+    onError: (e: any) => {
+      if ((e as any).status !== 409) {
+        setToast({ type: 'error', message: e.message ?? 'Erro ao sincronizar HubSpot' })
+      }
+    },
   })
 
   // Poll CRM integrations every 3s when any sync is in progress
