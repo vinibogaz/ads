@@ -34,6 +34,7 @@ async function proxy(request: NextRequest, { params }: { params: Promise<{ path:
     method: request.method,
     headers,
     body,
+    signal: AbortSignal.timeout(300_000), // 5 min timeout for long syncs
   })
 
   const responseBody = await res.text()
