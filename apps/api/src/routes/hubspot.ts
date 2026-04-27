@@ -205,6 +205,9 @@ export async function hubspotRoutes(app: FastifyInstance) {
     })
     if (!integration) return reply.status(404).send({ error: 'NOT_FOUND' })
 
+    // Return immediately — sync runs in background (can take minutes for large accounts)
+    reply.status(202).send({ data: { status: 'syncing', message: 'Sync iniciado em background. Aguarde alguns minutos e recarregue os leads.' } })
+
     let token: string
     try { token = await getValidToken(id, request.user.tid) } catch (e: any) {
       return reply.status(400).send({ error: 'TOKEN_ERROR', message: e.message })
