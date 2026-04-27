@@ -86,6 +86,78 @@ function GoogleAdsIcon() {
   )
 }
 
+function HubSpotConnectSection() {
+  const queryClient = useQueryClient()
+  const [showTokenForm, setShowTokenForm] = useState(false)
+  const [token, setToken] = useState('')
+  const [error, setError] = useState('')
+
+  const connect = useMutation({
+    mutationFn: () => api('/crm/hubspot/connect-token', {
+      method: 'POST',
+      body: JSON.stringify({ token: token.trim() }),
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crm-integrations'] })
+      setShowTokenForm(false)
+      setToken('')
+      setError('')
+    },
+    onError: (e: any) => setError(e.message ?? 'Token inválido'),
+  })
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 flex-1">
+          <div className="w-10 h-10 rounded-orf-sm bg-[#ff7a59] flex items-center justify-center text-white shrink-0">
+            <HubSpotIcon />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-orf-text">HubSpot CRM</p>
+            <p className="text-xs text-orf-text-2">Conecte via Private App token — sincroniza contatos, deals e receita</p>
+          </div>
+        </div>
+        <button
+          onClick={() => setShowTokenForm(v => !v)}
+          className="px-4 py-2 bg-[#ff7a59] text-white rounded-orf-sm text-xs font-medium hover:bg-[#ff7a59]/90 transition-colors whitespace-nowrap"
+        >
+          Conectar HubSpot
+        </button>
+      </div>
+
+      {showTokenForm && (
+        <div className="bg-orf-surface-2 border border-orf-border rounded-orf-sm p-4 space-y-3">
+          <div>
+            <p className="text-xs font-medium text-orf-text-2 mb-1">Token do Private App HubSpot</p>
+            <p className="text-xs text-orf-text-3 mb-2">
+              Em app.hubspot.com → Configurações → Integrações → Aplicativos privados → crie um app com os escopos de leitura de CRM e copie o token.
+            </p>
+            <input
+              type="password"
+              placeholder="pat-na1-..."
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              className="w-full px-3 py-2 bg-orf-surface border border-orf-border rounded-orf-sm text-sm text-orf-text placeholder:text-orf-text-3 focus:outline-none focus:border-orf-primary font-mono"
+            />
+          </div>
+          {error && <p className="text-xs text-red-400">{error}</p>}
+          <div className="flex gap-2">
+            <button onClick={() => setShowTokenForm(false)} className="flex-1 px-3 py-1.5 border border-orf-border rounded-orf-sm text-xs text-orf-text-2">Cancelar</button>
+            <button
+              onClick={() => connect.mutate()}
+              disabled={!token.trim() || connect.isPending}
+              className="flex-1 px-3 py-1.5 bg-[#ff7a59] text-white rounded-orf-sm text-xs font-medium disabled:opacity-50"
+            >
+              {connect.isPending ? 'Conectando...' : 'Conectar'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function GoogleAdsSection({ onGoogleAdsSetup }: { onGoogleAdsSetup?: string | null }) {
   const queryClient = useQueryClient()
   const [setupId, setSetupId] = useState<string | null>(null)
@@ -971,24 +1043,7 @@ export function IntegrationsView() {
           <div className="border-t border-orf-border" />
 
           {/* HubSpot */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3 flex-1">
-              <div className="w-10 h-10 rounded-orf-sm bg-[#ff7a59] flex items-center justify-center text-white shrink-0">
-                <HubSpotIcon />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-orf-text">HubSpot CRM</p>
-                <p className="text-xs text-orf-text-2">Sincronize contatos e deals — ticket médio, MRR e tempo de fechamento</p>
-              </div>
-            </div>
-            <button
-              onClick={handleConnectHubSpot}
-              disabled={connectingHubSpot}
-              className="px-4 py-2 bg-[#ff7a59] text-white rounded-orf-sm text-xs font-medium hover:bg-[#ff7a59]/90 disabled:opacity-60 transition-colors whitespace-nowrap"
-            >
-              {connectingHubSpot ? 'Redirecionando...' : 'Conectar HubSpot'}
-            </button>
-          </div>
+          <HubSpotConnectSection />
         </div>
       </section>
 

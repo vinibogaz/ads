@@ -55,9 +55,13 @@ async function getValidToken(integrationId: string, tenantId: string): Promise<s
     where: and(eq(crmIntegrations.id, integrationId), eq(crmIntegrations.tenantId, tenantId)),
   })
   if (!integration) throw new Error('Integration not found')
-  const creds = integration.credentials as { accessToken?: string; refreshToken?: string; tokenExpiry?: number }
-  if (!creds.refreshToken) throw new Error('No refresh token — reconnect HubSpot')
+  const creds = integration.credentials as { accessToken?: string; refreshToken?: string; tokenExpiry?: number; tokenType?: string }
 
+  // Private App tokens don't expire — return directly
+  if (creds.tokenType === 'private_app' && creds.accessToken) return creds.accessToken
+  if (!creds.accessToken) throw new Error('No access token — reconnect HubSpot')
+
+  if (!creds.refreshToken) throw new Error('No refresh token — reconnect HubSpot')
   const isExpired = !creds.tokenExpiry || Date.now() > creds.tokenExpiry
   if (!isExpired && creds.accessToken) return creds.accessToken
 
@@ -105,6 +109,39 @@ async function mapStage(tenantId: string, integrationId: string, hsDealStage: st
 }
 
 export async function hubspotRoutes(app: FastifyInstance) {
+
+  // POST /api/v1/crm/hubspot/connect-token — connect via Private App token
+  app.post('/connect-token', { preHandler: [app.authenticate] }, async (request, reply) => {
+    const body = z.object({
+      token: z.string().min(10),
+      name: z.string().optional(),
+    }).parse(request.body)
+
+    // Validate token by fetching account info
+    const infoRes = await fetch('https://api.hubapi.com/account-info/v3/details', {
+      headers: { Authorization: `Bearer ${body.token}` },
+    })
+    if (!infoRes.ok) {
+      return reply.status(400).send({ error: 'INVALID_TOKEN', message: 'Token inválido ou sem permissão. Verifique os escopos do seu Private App.' })
+    }
+    const info = await infoRes.json() as { portalId: number; uiDomain: string; companyName?: string }
+
+    const [row] = await db.insert(crmIntegrations).values({
+      tenantId: request.user.tid,
+      platform: 'hubspot',
+      name: body.name || `HubSpot (${info.uiDomain ?? info.portalId})`,
+      credentials: {
+        accessToken: body.token,
+        tokenType: 'private_app', // marks as non-expiring private app token
+        hubId: info.portalId,
+        hubDomain: info.uiDomain,
+      },
+      meta: { hubId: info.portalId, hubDomain: info.uiDomain, companyName: info.companyName },
+      status: 'active',
+    }).returning()
+
+    return reply.status(201).send({ data: { ...row, credentials: undefined } })
+  })
 
   // GET /api/v1/crm/hubspot/url
   app.get('/url', { preHandler: [app.authenticate] }, async (request, reply) => {
