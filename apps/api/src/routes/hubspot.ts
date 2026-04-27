@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { eq, and, or } from 'drizzle-orm'
+import { eq, and, or, inArray } from 'drizzle-orm'
 import { db, crmIntegrations, leads, funnelStages } from '@ads/db'
 import { z } from 'zod'
 import { env } from '../config/env.js'
@@ -230,19 +230,35 @@ export async function hubspotRoutes(app: FastifyInstance) {
     let synced = 0
     let updated = 0
 
-    // Map HubSpot lifecycle stage to our lead status
-    const mapLifecycleStatus = (lifecycle: string, dealStage?: string): string => {
-      if (dealStage === 'closedwon') return 'won'
-      if (dealStage === 'closedlost') return 'lost'
+    const mapLifecycleStatus = (lifecycle: string): string => {
       switch (lifecycle) {
         case 'customer': return 'won'
         case 'opportunity': return 'opportunity'
-        case 'salesqualifiedlead': return 'qualified'
-        case 'marketingqualifiedlead': return 'qualified'
-        case 'lead': return 'new'
-        case 'subscriber': return 'new'
+        case 'salesqualifiedlead': case 'marketingqualifiedlead': return 'qualified'
         default: return 'new'
       }
+    }
+
+    const STATUS_RANK: Record<string, number> = { new: 0, no_contact: 1, contacted: 2, qualified: 3, unqualified: 3, opportunity: 4, won: 5, lost: 5 }
+
+    // ── Batch fetch existing leads to avoid N+1 queries ──────────────────
+    const externalIds = contacts.map((c: any) => String(c.id))
+    const emails = contacts.map((c: any) => (c.properties?.email ?? '').toLowerCase().trim()).filter(Boolean)
+
+    const existingByExtId = new Map<string, any>()
+    const existingByEmail = new Map<string, any>()
+
+    if (externalIds.length > 0) {
+      const byExtId = await db.query.leads.findMany({
+        where: and(eq(leads.tenantId, request.user.tid), eq(leads.crmIntegrationId, id), inArray(leads.externalId, externalIds)),
+      })
+      byExtId.forEach((l) => l.externalId && existingByExtId.set(l.externalId, l))
+    }
+    if (emails.length > 0) {
+      const byEmail = await db.query.leads.findMany({
+        where: and(eq(leads.tenantId, request.user.tid), inArray(leads.email, emails)),
+      })
+      byEmail.forEach((l) => l.email && existingByEmail.set(l.email, l))
     }
 
     for (const contact of contacts) {
@@ -252,31 +268,12 @@ export async function hubspotRoutes(app: FastifyInstance) {
       const externalId = String(contact.id)
       const status = mapLifecycleStatus(p.hs_lifecycle_stage ?? '')
 
-      // Deduplication: 1st by externalId+crmIntegration, 2nd by email in tenant
-      let existing = await db.query.leads.findFirst({
-        where: and(
-          eq(leads.tenantId, request.user.tid),
-          eq(leads.crmIntegrationId, id),
-          eq(leads.externalId, externalId)
-        ),
-      })
-
-      // Fallback: match by email if no externalId match found
-      if (!existing && email) {
-        existing = await db.query.leads.findFirst({
-          where: and(
-            eq(leads.tenantId, request.user.tid),
-            eq(leads.email, email)
-          ),
-        })
-      }
+      const existing = existingByExtId.get(externalId) ?? (email ? existingByEmail.get(email) : null)
 
       if (existing) {
-        // Update existing lead — never change status backwards (e.g. won→new)
-        const STATUS_RANK: Record<string, number> = { new: 0, no_contact: 1, contacted: 2, qualified: 3, unqualified: 3, opportunity: 4, won: 5, lost: 5 }
         const keepStatus = (STATUS_RANK[existing.status] ?? 0) >= (STATUS_RANK[status] ?? 0)
         await db.update(leads).set({
-          externalId, // link by externalId going forward
+          externalId,
           crmIntegrationId: id,
           name: name || existing.name,
           email: email || existing.email,
@@ -299,14 +296,11 @@ export async function hubspotRoutes(app: FastifyInstance) {
           company: p.company || null,
           utmSource: p.hs_analytics_source || null,
           status: status as any,
-          meta: {
-            hsLifecycleStage: p.hs_lifecycle_stage,
-            hsSource: p.hs_analytics_source,
-            hsSourceDetail: p.hs_analytics_source_data_1,
-            firstUrl: p.hs_analytics_first_url,
-          },
+          meta: { hsLifecycleStage: p.hs_lifecycle_stage, hsSource: p.hs_analytics_source },
         })
         synced++
+        existingByExtId.set(externalId, { externalId, email })
+        if (email) existingByEmail.set(email, { externalId, email })
       }
     }
 

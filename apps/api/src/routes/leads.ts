@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { eq, and, desc, sql, isNotNull } from 'drizzle-orm'
+import { eq, and, desc, sql, isNotNull, gte, lte } from 'drizzle-orm'
 import { db, leads, funnelStages, offlineConversions, adsPlatformIntegrations } from '@ads/db'
 import { z } from 'zod'
 
@@ -70,8 +70,8 @@ export async function leadsRoutes(app: FastifyInstance) {
     const q = request.query as { clientId?: string; from?: string; to?: string }
     const conditions = [eq(leads.tenantId, request.user.tid)]
     if (q.clientId) conditions.push(eq(leads.clientId, q.clientId))
-    if (q.from) conditions.push(sql`${leads.createdAt} >= ${new Date(q.from)}`)
-    if (q.to) conditions.push(sql`${leads.createdAt} <= ${new Date(q.to)}`)
+    if (q.from) conditions.push(gte(leads.createdAt, new Date(q.from)))
+    if (q.to) conditions.push(lte(leads.createdAt, new Date(q.to)))
 
     const rows = await db.query.leads.findMany({ where: and(...conditions) })
 
