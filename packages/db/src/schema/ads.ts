@@ -162,6 +162,9 @@ export const crmIntegrations = pgTable(
     status: integrationStatusEnum('status').notNull().default('pending'),
     funnelMapping: jsonb('funnel_mapping').notNull().default({}), // { crm_stage_id: our_stage }
     lastSyncAt: timestamp('last_sync_at', { withTimezone: true }),
+    syncStatus: varchar('sync_status', { length: 20 }).default('idle'), // idle | syncing | done | error
+    syncProgress: integer('sync_progress').default(0),                  // 0-100
+    syncMessage: varchar('sync_message', { length: 255 }),              // last sync result
     meta: jsonb('meta').notNull().default({}),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

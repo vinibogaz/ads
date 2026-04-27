@@ -975,15 +975,23 @@ export function IntegrationsView() {
 
   const syncHubSpot = useMutation({
     mutationFn: (id: string) => api(`/crm/hubspot/sync/${id}`, { method: 'POST', body: JSON.stringify({}) }),
-    onSuccess: (res: any) => {
+    onSuccess: () => {
+      // Start polling for progress
       queryClient.invalidateQueries({ queryKey: ['crm-integrations'] })
-      const d = res?.data ?? {}
-      const parts: string[] = []
-      if (d.synced != null) parts.push(`${d.synced} sincronizados`)
-      if (d.updated != null) parts.push(`${d.updated} atualizados`)
-      setToast({ type: 'success', message: `HubSpot: ${parts.length > 0 ? parts.join(' · ') : 'sync concluído'}` })
     },
     onError: (e: any) => setToast({ type: 'error', message: e.message ?? 'Erro ao sincronizar HubSpot' }),
+  })
+
+  // Poll CRM integrations every 3s when any sync is in progress
+  const { data: crmPollData } = useQuery({
+    queryKey: ['crm-integrations-poll'],
+    queryFn: () => api<CrmIntegration[]>('/ads-integrations/crm'),
+    refetchInterval: (query) => {
+      const data = query.state.data?.data ?? []
+      const syncing = data.some((c: any) => c.syncStatus === 'syncing')
+      return syncing ? 3000 : false
+    },
+    enabled: true,
   })
 
   const toggleSelect = (id: string) => {
@@ -1152,50 +1160,74 @@ export function IntegrationsView() {
               Nenhum CRM conectado. Conecte RD Station, HubSpot, Pipedrive e outros para espelhar o funil aqui.
             </div>
           ) : (
-            crms.map((crm) => (
-              <div key={crm.id} className="bg-orf-surface border border-orf-border rounded-orf p-4 flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-orf-text text-sm">{crm.name}</p>
-                  <p className="text-xs text-orf-text-2 mt-0.5">{CRM_PLATFORM_LABELS[crm.platform]}</p>
-                  {crm.lastSyncAt && (
-                    <p className="text-xs text-orf-text-3 mt-0.5">
-                      Sync: {new Date(crm.lastSyncAt).toLocaleString('pt-BR')}
-                    </p>
+            crms.map((crm) => {
+              const polled = crmPollData?.data?.find((c: any) => c.id === crm.id)
+              const syncStatus = (polled as any)?.syncStatus ?? (crm as any).syncStatus ?? 'idle'
+              const syncProgress = (polled as any)?.syncProgress ?? (crm as any).syncProgress ?? 0
+              const syncMessage = (polled as any)?.syncMessage ?? (crm as any).syncMessage
+              const isSyncing = syncStatus === 'syncing'
+
+              return (
+                <div key={crm.id} className="bg-orf-surface border border-orf-border rounded-orf p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-0">
+                      <p className="font-medium text-orf-text text-sm">{crm.name}</p>
+                      <p className="text-xs text-orf-text-2 mt-0.5">{CRM_PLATFORM_LABELS[crm.platform]}</p>
+                      {syncStatus === 'done' && syncMessage && (
+                        <p className="text-xs text-emerald-400 mt-0.5">{syncMessage}</p>
+                      )}
+                      {syncStatus === 'error' && syncMessage && (
+                        <p className="text-xs text-red-400 mt-0.5">{syncMessage}</p>
+                      )}
+                      {!isSyncing && crm.lastSyncAt && (
+                        <p className="text-xs text-orf-text-3 mt-0.5">
+                          Último sync: {new Date(crm.lastSyncAt).toLocaleString('pt-BR')}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLES[crm.status]}`}>
+                        {STATUS_LABELS[crm.status]}
+                      </span>
+                      {crm.platform === 'hubspot' && (
+                        <>
+                          <button
+                            onClick={() => { setMappingCrmId(crm.id); setStageMapping((crm as any).funnelMapping ?? {}) }}
+                            className="text-xs text-orf-text-2 hover:text-orf-text transition-colors"
+                          >
+                            Mapear Funil
+                          </button>
+                          <button
+                            onClick={() => syncHubSpot.mutate(crm.id)}
+                            disabled={isSyncing || syncHubSpot.isPending}
+                            className="text-xs text-orf-primary hover:text-orf-primary/80 transition-colors disabled:opacity-50"
+                          >
+                            {isSyncing ? `${syncProgress}%` : 'Sync'}
+                          </button>
+                        </>
+                      )}
+                      <button onClick={() => deleteCrm.mutate(crm.id)} className="text-xs text-red-400 hover:text-red-600">Remover</button>
+                    </div>
+                  </div>
+
+                  {/* Progress bar during sync */}
+                  {isSyncing && (
+                    <div className="mt-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-xs text-orf-text-3">{syncMessage || 'Sincronizando...'}</p>
+                        <p className="text-xs text-orf-primary font-medium">{syncProgress}%</p>
+                      </div>
+                      <div className="h-1.5 bg-orf-surface-2 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-orf-primary rounded-full transition-all duration-500"
+                          style={{ width: `${syncProgress}%` }}
+                        />
+                      </div>
+                    </div>
                   )}
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLES[crm.status]}`}>
-                    {STATUS_LABELS[crm.status]}
-                  </span>
-                  {crm.platform === 'hubspot' && (
-                    <>
-                      <button
-                        onClick={() => {
-                          setMappingCrmId(crm.id)
-                          setStageMapping((crm as any).funnelMapping ?? {})
-                        }}
-                        className="text-xs text-orf-text-2 hover:text-orf-text transition-colors"
-                      >
-                        Mapear Funil
-                      </button>
-                      <button
-                        onClick={() => syncHubSpot.mutate(crm.id)}
-                        disabled={syncHubSpot.isPending}
-                        className="text-xs text-orf-primary hover:text-orf-primary/80 transition-colors"
-                      >
-                        {syncHubSpot.isPending ? 'Sync...' : 'Sync'}
-                      </button>
-                    </>
-                  )}
-                  <button
-                    onClick={() => deleteCrm.mutate(crm.id)}
-                    className="text-xs text-red-400 hover:text-red-600 transition-colors"
-                  >
-                    Remover
-                  </button>
-                </div>
-              </div>
-            ))
+              )
+            })
           )}
         </div>
       </section>

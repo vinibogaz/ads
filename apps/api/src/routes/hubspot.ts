@@ -210,77 +210,111 @@ export async function hubspotRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: 'TOKEN_ERROR', message: e.message })
     }
 
-    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+    // Mark as syncing immediately so frontend can show progress
+    await db.update(crmIntegrations)
+      .set({ syncStatus: 'syncing', syncProgress: 0, syncMessage: 'Iniciando...', updatedAt: new Date() })
+      .where(eq(crmIntegrations.id, id))
 
-    async function fetchAllPages(path: string, params: Record<string, string>): Promise<any[]> {
-      const all: any[] = []
-      let after: string | undefined = undefined
-      do {
-        const pageParams = { ...params, limit: '100', ...(after ? { after } : {}) }
-        let retries = 3; let data: any
-        while (retries > 0) {
-          try { data = await hsGet(token, path, pageParams); break }
-          catch (e: any) {
-            if (e.message?.includes('limit') && retries > 1) { await sleep(3000); retries-- }
-            else throw e
-          }
-        }
-        all.push(...(data.results ?? []))
-        after = data.paging?.next?.after
-        if (after) await sleep(500)
-      } while (after)
-      return all
-    }
+    // Return 202 immediately — frontend polls progress
+    reply.status(202).send({ data: { status: 'syncing' } })
 
-    try {
-      const contacts = await fetchAllPages('/crm/v3/objects/contacts', {
-        properties: 'firstname,lastname,email,phone,company,hs_lead_status,hs_lifecycle_stage,createdate,hs_analytics_source,hs_analytics_source_data_1,hs_analytics_source_data_2,hs_analytics_first_url',
-      })
-      app.log.info({ integrationId: id, total: contacts.length }, 'HubSpot contacts fetched')
-
-      const { created, updated } = await runHubSpotContactSync(request.user.tid, id, contacts, body.clientId)
-      app.log.info({ integrationId: id, created, updated }, 'HubSpot contacts synced')
-
-      if (body.syncDeals) {
-        const deals = await fetchAllPages('/crm/v3/objects/deals', {
-          properties: 'dealname,amount,closedate,dealstage,pipeline,createdate,mrr',
-          associations: 'contacts',
-        })
-        let dealsUpdated = 0
-        for (const deal of deals) {
-          const p = deal.properties ?? {}
-          const contactIds: string[] = (deal.associations?.contacts?.results ?? []).map((c: any) => String(c.id))
-          if (contactIds.length === 0) continue
-          const isWon = p.dealstage === 'closedwon'
-          const isLost = p.dealstage === 'closedlost'
-          const stageId = await mapStage(request.user.tid, id, p.dealstage)
-          const dealStatus = isWon ? 'won' : isLost ? 'lost' : undefined
-          for (const contactId of contactIds) {
-            const lead = await db.query.leads.findFirst({
-              where: and(eq(leads.tenantId, request.user.tid), eq(leads.crmIntegrationId, id), eq(leads.externalId, contactId)),
-            })
-            if (!lead) continue
-            await db.update(leads).set({
-              value: p.amount ? String(p.amount) : lead.value,
-              mrr: p.mrr ? String(p.mrr) : lead.mrr,
-              closedAt: isWon && p.closedate ? new Date(p.closedate) : lead.closedAt,
-              ...(dealStatus ? { status: dealStatus as any } : {}),
-              stageId: stageId ?? lead.stageId,
-              updatedAt: new Date(),
-            }).where(eq(leads.id, lead.id))
-            dealsUpdated++
-          }
-        }
-        app.log.info({ integrationId: id, dealsUpdated }, 'HubSpot deals synced')
+    // Run sync in background — completely detached from request lifecycle
+    setImmediate(async () => {
+      const setProgress = async (progress: number, message: string) => {
+        try {
+          await db.update(crmIntegrations)
+            .set({ syncProgress: progress, syncMessage: message, updatedAt: new Date() })
+            .where(eq(crmIntegrations.id, id))
+        } catch {}
       }
 
-      await db.update(crmIntegrations).set({ lastSyncAt: new Date(), updatedAt: new Date() }).where(eq(crmIntegrations.id, id))
+      const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-      return reply.send({ data: { contacts: contacts.length, created, updated } })
-    } catch (e: any) {
-      app.log.error({ integrationId: id, err: e.message }, 'HubSpot sync error')
-      return reply.status(500).send({ error: 'SYNC_FAILED', message: e.message })
-    }
+      async function fetchAllPages(path: string, params: Record<string, string>): Promise<any[]> {
+        const all: any[] = []
+        let after: string | undefined = undefined
+        do {
+          const pageParams = { ...params, limit: '100', ...(after ? { after } : {}) }
+          let retries = 3; let data: any
+          while (retries > 0) {
+            try { data = await hsGet(token, path, pageParams); break }
+            catch (e: any) {
+              if (e.message?.includes('limit') && retries > 1) { await sleep(3000); retries-- }
+              else throw e
+            }
+          }
+          all.push(...(data.results ?? []))
+          after = data.paging?.next?.after
+          if (after) await sleep(400)
+        } while (after)
+        return all
+      }
+
+      try {
+        await setProgress(5, 'Buscando contatos no HubSpot...')
+        const contacts = await fetchAllPages('/crm/v3/objects/contacts', {
+          properties: 'firstname,lastname,email,phone,company,hs_lead_status,hs_lifecycle_stage,createdate,hs_analytics_source,hs_analytics_source_data_1,hs_analytics_source_data_2,hs_analytics_first_url',
+        })
+        app.log.info({ integrationId: id, total: contacts.length }, 'HubSpot contacts fetched')
+
+        await setProgress(30, `${contacts.length} contatos encontrados. Sincronizando...`)
+        const { created, updated } = await runHubSpotContactSync(request.user.tid, id, contacts, body.clientId)
+        app.log.info({ integrationId: id, created, updated }, 'HubSpot contacts synced')
+
+        await setProgress(70, `Contatos ok. Buscando deals...`)
+
+        if (body.syncDeals) {
+          const deals = await fetchAllPages('/crm/v3/objects/deals', {
+            properties: 'dealname,amount,closedate,dealstage,pipeline,createdate,mrr',
+            associations: 'contacts',
+          })
+          await setProgress(85, `${deals.length} deals encontrados. Atualizando receita...`)
+          let dealsUpdated = 0
+          for (const deal of deals) {
+            const p = deal.properties ?? {}
+            const contactIds: string[] = (deal.associations?.contacts?.results ?? []).map((c: any) => String(c.id))
+            if (contactIds.length === 0) continue
+            const isWon = p.dealstage === 'closedwon'
+            const isLost = p.dealstage === 'closedlost'
+            const stageId = await mapStage(request.user.tid, id, p.dealstage)
+            const dealStatus = isWon ? 'won' : isLost ? 'lost' : undefined
+            for (const contactId of contactIds) {
+              const lead = await db.query.leads.findFirst({
+                where: and(eq(leads.tenantId, request.user.tid), eq(leads.crmIntegrationId, id), eq(leads.externalId, contactId)),
+              })
+              if (!lead) continue
+              await db.update(leads).set({
+                value: p.amount ? String(p.amount) : lead.value,
+                mrr: p.mrr ? String(p.mrr) : lead.mrr,
+                closedAt: isWon && p.closedate ? new Date(p.closedate) : lead.closedAt,
+                ...(dealStatus ? { status: dealStatus as any } : {}),
+                stageId: stageId ?? lead.stageId,
+                updatedAt: new Date(),
+              }).where(eq(leads.id, lead.id))
+              dealsUpdated++
+            }
+          }
+          app.log.info({ integrationId: id, dealsUpdated }, 'HubSpot deals synced')
+        }
+
+        await db.update(crmIntegrations).set({
+          lastSyncAt: new Date(),
+          syncStatus: 'done',
+          syncProgress: 100,
+          syncMessage: `✓ ${contacts.length} contatos sincronizados`,
+          updatedAt: new Date(),
+        }).where(eq(crmIntegrations.id, id))
+        app.log.info({ integrationId: id }, 'HubSpot sync completed')
+      } catch (e: any) {
+        app.log.error({ integrationId: id, err: e.message }, 'HubSpot sync error')
+        await db.update(crmIntegrations).set({
+          syncStatus: 'error',
+          syncProgress: 0,
+          syncMessage: e.message ?? 'Erro no sync',
+          updatedAt: new Date(),
+        }).where(eq(crmIntegrations.id, id))
+      }
+    })
   })
 
   // GET /api/v1/crm/hubspot/pipeline/:id — fetch HubSpot deal stages for funnel mapping
