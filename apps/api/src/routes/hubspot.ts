@@ -240,7 +240,7 @@ export async function hubspotRoutes(app: FastifyInstance) {
 
     // ── Sync contacts → leads ─────────────────────────────────────────────
     const contacts = await fetchAllPages('/crm/v3/objects/contacts', {
-      properties: 'firstname,lastname,email,phone,company,hs_lead_status,hs_lifecycle_stage,createdate,hs_analytics_source,hs_analytics_source_data_1,hs_analytics_first_url',
+      properties: 'firstname,lastname,email,phone,company,hs_lead_status,hs_lifecycle_stage,createdate,hs_analytics_source,hs_analytics_source_data_1,hs_analytics_source_data_2,hs_analytics_first_url',
     })
 
     let synced = 0

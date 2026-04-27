@@ -6,6 +6,35 @@ import { api } from '@/lib/api'
 import type { Lead, LeadStatus } from '@ads/shared'
 import { useClientStore } from '@/store/client'
 
+const PLATFORM_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  facebook:  { label: 'Facebook',  color: 'text-blue-400',   bg: 'bg-blue-500/10' },
+  instagram: { label: 'Instagram', color: 'text-pink-400',   bg: 'bg-pink-500/10' },
+  google:    { label: 'Google',    color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
+  youtube:   { label: 'YouTube',   color: 'text-red-400',    bg: 'bg-red-500/10' },
+  linkedin:  { label: 'LinkedIn',  color: 'text-blue-500',   bg: 'bg-blue-600/10' },
+  tiktok:    { label: 'TikTok',    color: 'text-orf-text',   bg: 'bg-orf-surface-2' },
+  twitter:   { label: 'Twitter/X', color: 'text-sky-400',    bg: 'bg-sky-500/10' },
+  organic:   { label: 'Orgânico',  color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+  direct:    { label: 'Direto',    color: 'text-orf-text-2', bg: 'bg-orf-surface-2' },
+  email:     { label: 'E-mail',    color: 'text-purple-400', bg: 'bg-purple-500/10' },
+  referral:  { label: 'Referral',  color: 'text-cyan-400',   bg: 'bg-cyan-500/10' },
+  whatsapp:  { label: 'WhatsApp',  color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+}
+
+function SourceBadge({ source, medium, campaign }: { source?: string | null; medium?: string | null; campaign?: string | null }) {
+  if (!source) return <span className="text-orf-text-3 text-xs">—</span>
+  const cfg = PLATFORM_CONFIG[source.toLowerCase()] ?? { label: source, color: 'text-orf-text-2', bg: 'bg-orf-surface-2' }
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium w-fit ${cfg.bg} ${cfg.color}`}>
+        {cfg.label}
+      </span>
+      {medium && medium !== '(none)' && <span className="text-xs text-orf-text-3">{medium}</span>}
+      {campaign && <span className="text-xs text-orf-text-3 truncate max-w-[120px]">{campaign}</span>}
+    </div>
+  )
+}
+
 const STATUS_LABELS: Record<LeadStatus, string> = {
   new: 'Novo',
   no_contact: 'Sem Contato',
@@ -195,13 +224,8 @@ export function LeadsView() {
                       {lead.email && <p className="text-xs text-orf-text-3">{lead.email}</p>}
                       {lead.company && <p className="text-xs text-orf-text-3">{lead.company}</p>}
                     </td>
-                    <td className="px-4 py-3 text-orf-text-2">
-                      {lead.utmSource ? (
-                        <div className="text-xs">
-                          <p>{lead.utmSource}</p>
-                          {lead.utmCampaign && <p className="text-orf-text-3">{lead.utmCampaign}</p>}
-                        </div>
-                      ) : '—'}
+                    <td className="px-4 py-3">
+                      <SourceBadge source={lead.utmSource} medium={(lead as any).utmMedium} campaign={lead.utmCampaign} />
                     </td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[lead.status]}`}>
