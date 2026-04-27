@@ -29,6 +29,7 @@ import { utmDictionaryRoutes } from './routes/utm-dictionary.js'
 import { hubspotRoutes } from './routes/hubspot.js'
 import { crmWebhookRoutes } from './routes/crm-webhook.js'
 import { workspacesRoutes } from './routes/workspaces.js'
+import { startCrmSyncScheduler, stopCrmSyncScheduler } from './services/crm-sync-scheduler.js'
 import { env } from './config/env.js'
 
 const app = Fastify({
@@ -110,6 +111,12 @@ const start = async () => {
   try {
     await app.listen({ port: env.PORT, host: '0.0.0.0' })
     app.log.info(`Orffia Ads API running on port ${env.PORT}`)
+    startCrmSyncScheduler(app.log)
+
+    // Graceful shutdown
+    const shutdown = () => { stopCrmSyncScheduler(); process.exit(0) }
+    process.on('SIGTERM', shutdown)
+    process.on('SIGINT', shutdown)
   } catch (error: unknown) {
     const err = error as Error
     app.log.error(err)
