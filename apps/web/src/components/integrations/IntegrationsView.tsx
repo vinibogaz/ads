@@ -91,6 +91,24 @@ function HubSpotConnectSection() {
   const [showTokenForm, setShowTokenForm] = useState(false)
   const [token, setToken] = useState('')
   const [error, setError] = useState('')
+  const [connecting, setConnecting] = useState(false)
+
+  const handleConnect = async () => {
+    setConnecting(true)
+    setError('')
+    try {
+      const res = await api<{ url: string }>('/crm/hubspot/url')
+      window.location.href = res.data.url
+    } catch (e: any) {
+      if (e.error === 'HUBSPOT_NOT_CONFIGURED') {
+        // OAuth not configured — fall back to token form
+        setShowTokenForm(true)
+      } else {
+        setError(e.message ?? 'Erro ao conectar')
+      }
+      setConnecting(false)
+    }
+  }
 
   const connect = useMutation({
     mutationFn: () => api('/crm/hubspot/connect-token', {
@@ -115,16 +133,19 @@ function HubSpotConnectSection() {
           </div>
           <div>
             <p className="text-sm font-medium text-orf-text">HubSpot CRM</p>
-            <p className="text-xs text-orf-text-2">Conecte via Private App token — sincroniza contatos, deals e receita</p>
+            <p className="text-xs text-orf-text-2">Sincronize contatos e deals — ticket médio, MRR e tempo de fechamento</p>
           </div>
         </div>
         <button
-          onClick={() => setShowTokenForm(v => !v)}
-          className="px-4 py-2 bg-[#ff7a59] text-white rounded-orf-sm text-xs font-medium hover:bg-[#ff7a59]/90 transition-colors whitespace-nowrap"
+          onClick={handleConnect}
+          disabled={connecting}
+          className="px-4 py-2 bg-[#ff7a59] text-white rounded-orf-sm text-xs font-medium hover:bg-[#ff7a59]/90 disabled:opacity-60 transition-colors whitespace-nowrap"
         >
-          Conectar HubSpot
+          {connecting ? 'Redirecionando...' : 'Conectar HubSpot'}
         </button>
       </div>
+
+      {error && <p className="text-xs text-red-400 px-1">{error}</p>}
 
       {showTokenForm && (
         <div className="bg-orf-surface-2 border border-orf-border rounded-orf-sm p-4 space-y-3">
