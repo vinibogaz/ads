@@ -91,7 +91,10 @@ async function getValidToken(integrationId: string, tenantId: string): Promise<s
 async function hsGet(token: string, path: string, params?: Record<string, string>) {
   const url = new URL(`${HS_API}${path}`)
   if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
-  const res = await fetch(url.toString(), { headers: { Authorization: `Bearer ${token}` } })
+  const res = await fetch(url.toString(), {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(30_000), // 30s timeout — fetch travaria sem isso
+  })
   if (!res.ok) {
     const err = await res.json().catch(() => ({})) as any
     throw new Error(err.message ?? `HubSpot API error: ${res.status}`)
