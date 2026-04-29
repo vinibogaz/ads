@@ -278,6 +278,35 @@ export async function hubspotRoutes(app: FastifyInstance) {
             associations: 'contacts',
           })
           await setProgress(85, `${deals.length} deals encontrados. Atualizando receita...`)
+
+          // Pre-load funnel mapping once (avoids N+1 DB calls inside loop)
+          const integrationRow = await db.query.crmIntegrations.findFirst({
+            where: and(eq(crmIntegrations.id, id), eq(crmIntegrations.tenantId, request.user.tid)),
+          })
+          const funnelMapping = (integrationRow?.funnelMapping ?? {}) as Record<string, string>
+
+          // Collect all unique contact IDs referenced by any deal
+          const allContactIds = [...new Set(
+            deals.flatMap((d: any) =>
+              (d.associations?.contacts?.results ?? []).map((c: any) => String(c.id))
+            )
+          )]
+
+          // Fetch matching leads in chunks of 1 000
+          const leadByExtId = new Map<string, any>()
+          const CHUNK = 1_000
+          for (let i = 0; i < allContactIds.length; i += CHUNK) {
+            const ids = allContactIds.slice(i, i + CHUNK)
+            const rows = await db.query.leads.findMany({
+              where: and(
+                eq(leads.tenantId, request.user.tid),
+                eq(leads.crmIntegrationId, id),
+                inArray(leads.externalId, ids),
+              ),
+            })
+            rows.forEach((l) => l.externalId && leadByExtId.set(l.externalId, l))
+          }
+
           let dealsUpdated = 0
           for (const deal of deals) {
             const p = deal.properties ?? {}
@@ -285,12 +314,10 @@ export async function hubspotRoutes(app: FastifyInstance) {
             if (contactIds.length === 0) continue
             const isWon = p.dealstage === 'closedwon'
             const isLost = p.dealstage === 'closedlost'
-            const stageId = await mapStage(request.user.tid, id, p.dealstage)
             const dealStatus = isWon ? 'won' : isLost ? 'lost' : undefined
+            const stageId = funnelMapping[p.dealstage] ?? null
             for (const contactId of contactIds) {
-              const lead = await db.query.leads.findFirst({
-                where: and(eq(leads.tenantId, request.user.tid), eq(leads.crmIntegrationId, id), eq(leads.externalId, contactId)),
-              })
+              const lead = leadByExtId.get(contactId)
               if (!lead) continue
               await db.update(leads).set({
                 value: p.amount ? String(p.amount) : lead.value,
